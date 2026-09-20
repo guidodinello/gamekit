@@ -31,8 +31,9 @@ history.
   stdlib), `gamekit.rl.driver` (`advance_until_learner`, auto-stepping every
   non-learner seat until the learner must act — stdlib),
   `gamekit.rl.selfplay` (`OpponentPool`, checkpoint resampling with a
-  baseline-mix fallback — stdlib), `gamekit.rl.masking` (legal-action mask
-  building — stdlib), and `gamekit.rl.env` (`SingleAgentEnv`, a `gym.Env`
+  baseline-mix fallback, run-scoped via `run_id` — stdlib),
+  `gamekit.rl.masking` (legal-action mask building — stdlib), and
+  `gamekit.rl.env` (`SingleAgentEnv`, a `gym.Env`
   subclass — needs `gymnasium`/`numpy`, the only submodule that does).
   `gamekit.rl` never imports a training framework (no torch, no
   stable-baselines3/sb3-contrib) — checkpoint loading is injected by the
