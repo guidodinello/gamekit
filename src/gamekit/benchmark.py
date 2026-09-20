@@ -17,6 +17,16 @@ engine's record type becoming a gamekit dependency.
 in catan: a heuristic-vs-random result is confounded unless role-to-seat
 assignment rotates so each role occupies each seat an equal number of times
 across an arm. See ``run_arm``'s docstring for the exact rotation contract.
+
+**A "seat" is a competitor slot, not necessarily one player.** It may be
+occupied by a single player (catan) or by a fixed group of players sharing one
+outcome, i.e. a team (truco-py) -- the only requirement is that exactly one
+seat is credited with the win per game. truco-py's adoption is the worked
+example: a 6-player, 2-team game runs ``run_arm`` with ``num_seats=2`` and a
+2-role lineup (one role per team), with ``winning_seat`` returning the winning
+team's index (or ``None`` for a tie) rather than an individual player's seat.
+No widening of this module's API is required for a team game -- see
+`guidodinello/truco-py#1 <https://github.com/guidodinello/truco-py/pull/1>`_.
 """
 
 from __future__ import annotations
@@ -123,7 +133,9 @@ def run_arm[R](
     and returns one result per pair, in the same order; the game decides how
     those results get produced (sequentially, via a process pool, whatever).
     ``winning_seat`` reads the winning seat out of one result, or ``None``
-    for a game with no winner.
+    for a game with no winner. A seat may represent a team rather than a
+    single player -- see this module's docstring for the competitor-slot
+    reinterpretation.
     """
     if n_games % len(lineup) != 0:
         raise ValueError(
