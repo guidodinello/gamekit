@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-20
+
+### Added
+- `gamekit.rl.selfplay.OpponentPool` gains a keyword-only `run_id`
+  constructor argument that scopes the checkpoint glob to
+  `directory / run_id`, a `checkpoint_dir` property exposing that resolved
+  path so a checkpoint writer and this reader share one source of truth,
+  and a public `checkpoints()` method listing every path currently eligible
+  for `sample()`. `run_id` defaults to `None`, which keeps the pre-0.3.0
+  behaviour of globbing `directory` itself unchanged. See #23.
+
+### Fixed
+- `OpponentPool` globbed the whole checkpoint directory with no notion of
+  which run produced a file, so a checkpoint left over from an earlier or
+  collapsed run stayed eligible for sampling forever. truco-py hit this in
+  practice: a `truco_selfplay_final.zip` from a run that had collapsed to
+  ~57% vs `ThresholdAgent` (down from 85.3%) kept getting sampled as an
+  opponent by every later run. Passing `run_id` scopes the pool to a single
+  run's subdirectory, so a stale checkpoint from a different run can no
+  longer be drawn. Closes #23.
+
 ## [0.2.0] - 2026-09-20
 
 ### Breaking
