@@ -26,8 +26,7 @@ history.
 Core is stdlib + nothing else — no runtime dependencies. An `[rl]` extra
 (torch/gymnasium/stable-baselines3) is planned but not yet built; see this
 repo's issues for the rest of the v0.2 backlog (unified vectorized/iterative
-Monte Carlo sampling, variance reduction, adaptive stopping, the `seat_rng`
-explicit-mix migration).
+Monte Carlo sampling, variance reduction, adaptive stopping).
 
 ## Installation
 
