@@ -20,6 +20,16 @@
 # per-leg (e.g. "Tests (Python) (3.13)") -- read the real names off the
 # first CI run before pasting anything into required_status_checks.
 #
+# gamekit-specific: RL extra below is a separate job, not an `extras` axis
+# on Tests (Python) -- a matrix dimension renames every leg's check context
+# (e.g. "Tests (Python) (3.13, )"), which would silently invalidate the
+# required-status-checks entries already on this repo's branch ruleset.
+# It mirrors the 3.13/3.14 matrix for the same reason Typecheck Python does:
+# gamekit's own dependabot-automerge.yml auto-merges patch/minor bumps of
+# gymnasium/numpy with no human review, so this is the only thing that
+# would catch one of those bumps shipping wheels for one supported
+# interpreter and not the other.
+#
 # Before the first push, check the target repo actually has what this
 # workflow assumes — two gaps found rolling this out the first time:
 #   - `ruff`/`pytest` must be in the project's own dev dependency group.
@@ -114,4 +124,31 @@ jobs:
         run: uv sync --dev --python ${{ matrix.python-version }}
 
       - name: mypy
+        run: uv run mypy src tests
+
+  rl-extra:
+    name: RL extra
+    runs-on: ubuntu-latest
+    # Mirror Tests (Python)'s matrix -- see the header comment for why this
+    # is a separate job and why it runs both interpreters.
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies (with the [rl] extra)
+        run: uv sync --dev --extra rl --python ${{ matrix.python-version }}
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: mypy (with real gymnasium/numpy types)
         run: uv run mypy src tests
