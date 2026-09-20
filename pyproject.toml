@@ -9,6 +9,12 @@ authors = [{ name = "Guido Dinello", email = "guido.dinello@gmail.com" }]
 # with the vectorised Sampler (issue #1), torch/gymnasium with the [rl] extra.
 dependencies = []
 
+[project.optional-dependencies]
+# gymnasium + numpy only -- gamekit.rl imports no training framework (no
+# torch, stable-baselines3, sb3-contrib), so there is no separate [rl-train]
+# extra. See gamekit#7 / src/gamekit/rl/env.py's module docstring.
+rl = ["gymnasium>=1.0", "numpy>=2.0"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -46,6 +52,12 @@ strict_optional = true
 warn_redundant_casts = true
 warn_return_any = true
 warn_unused_ignores = true
+
+# gamekit.rl.env is the only module that imports these, and only under the
+# [rl] extra -- mypy must stay green whether or not it's installed (gamekit#7).
+[[tool.mypy.overrides]]
+module = ["gymnasium.*", "numpy.*"]
+ignore_missing_imports = true
 
 [dependency-groups]
 dev = [
