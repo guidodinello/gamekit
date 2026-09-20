@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Sampler/Evaluator wrappers over the gap-1 fold (mmo-utils DESIGN.md gap 4,
   #5). Each is tested against a known integrand with negative controls that
   isolate the correlation effect from the arithmetic of averaging.
+- `gamekit.mc.stopping.monte_carlo_until`: run the gap-1 fold in chunks
+  until a target confidence-interval half-width is reached, with a
+  mandatory `max_n` hard cap (mmo-utils DESIGN.md gap 5, #6). Not wired
+  into `gamekit.benchmark.run_arm` -- its exact-multiple-of-lineup-length
+  requirement is a real constraint on any future integration, noted but
+  not designed here.
 
 ### Changed
 - `gamekit.benchmark`'s docstrings clarify that a "seat" is a competitor slot

@@ -14,7 +14,12 @@ history.
 
 - `gamekit.agent` — the `Agent[StateT, ActionT]` protocol.
 - `gamekit.mc` — confidence intervals, sample-size formulas, two-proportion
-  testing, and streaming accumulators (stdlib-only).
+  testing, and streaming accumulators (stdlib-only), plus one unified Monte
+  Carlo sampling model: `monte_carlo`/`monte_carlo_reduce` (a
+  `Sampler -> Evaluator -> Accumulator` fold, admitting both scalar and
+  vectorized samplers with no numpy dependency), variance reduction
+  (`antithetic`, `control_variate`), and adaptive stopping
+  (`monte_carlo_until`, run until a target confidence-interval half-width).
 - `gamekit.seats` — seat-keyed RNG streams and lineup rotation.
 - `gamekit.results` — git-commit-stamped JSON result files.
 - `gamekit.benchmark` — a field-free benchmark-arm runner: mandatory seat
@@ -46,9 +51,12 @@ history.
 
 ## Scope
 
-Core is stdlib + nothing else — no runtime dependencies. See this repo's
-issues for the rest of the v0.2 backlog (unified vectorized/iterative Monte
-Carlo sampling, variance reduction, adaptive stopping).
+Core is stdlib + nothing else — no runtime dependencies, including
+`gamekit.mc`'s sampling model: a vectorized sampler returning a numpy
+`ndarray` satisfies `Sampler[T]` structurally (`Callable[[int],
+Iterable[T]]`), so numpy is never imported by gamekit itself. `gamekit.rl`'s
+`[rl]` extra (torch/gymnasium/stable-baselines3) is the only place a
+runtime dependency arrives, and only for callers who install that extra.
 
 ## Installation
 
