@@ -5,8 +5,11 @@ description = "Game-agnostic agents, Monte Carlo statistics, and benchmark harne
 readme = "README.md"
 requires-python = ">=3.13"
 authors = [{ name = "Guido Dinello", email = "guido.dinello@gmail.com" }]
-# Deliberately empty: every module in the core is stdlib-only. numpy arrives
-# with the vectorised Sampler (issue #1), torch/gymnasium with the [rl] extra.
+# Deliberately empty: every module in the core is stdlib-only, including
+# gamekit.mc's Sampler/Evaluator/Accumulator fold -- a vectorized sampler
+# returning a numpy ndarray satisfies Sampler[T] = Callable[[int],
+# Iterable[T]] structurally, so numpy is never imported here. It arrives
+# only with the [rl] extra below.
 dependencies = []
 
 [project.optional-dependencies]

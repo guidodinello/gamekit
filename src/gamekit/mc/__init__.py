@@ -17,9 +17,9 @@ gaps directly:
   with ``monte_carlo`` a convenience over ``monte_carlo_reduce``.
 - **Gap 4** (variance reduction) -- see ``gamekit.mc.variance``: antithetic
   variates as a sampler wrapper, control variates as an evaluator wrapper.
-
-Gap 5 (adaptive stopping) is tracked as an issue on this repo, not addressed
-here -- see ``docs/shared-ml-package.md`` for links.
+- **Gap 5** (adaptive stopping) -- see ``gamekit.mc.stopping``:
+  ``monte_carlo_until`` runs the gap-1 fold in chunks until a target
+  confidence-interval half-width is reached or a hard cap is hit.
 """
 
 from __future__ import annotations
@@ -40,6 +40,7 @@ from gamekit.mc.sample_size import (
     sample_size_hoeffding,
     two_proportion_sample_size,
 )
+from gamekit.mc.stopping import AdaptiveResult, monte_carlo_until
 from gamekit.mc.testing import (
     TwoProportionTest,
     benjamini_hochberg,
@@ -49,6 +50,7 @@ from gamekit.mc.variance import antithetic, control_beta, control_variate, paire
 
 __all__ = [
     "Accumulator",
+    "AdaptiveResult",
     "ConfidenceInterval",
     "Evaluator",
     "MCResult",
@@ -63,6 +65,7 @@ __all__ = [
     "control_variate",
     "monte_carlo",
     "monte_carlo_reduce",
+    "monte_carlo_until",
     "paired_mean",
     "sample_size_clt",
     "sample_size_hoeffding",
