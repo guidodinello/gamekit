@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   -- no numpy dependency, no `[numpy]` extra; a vectorized sampler returning
   a numpy `ndarray` satisfies `Sampler[T]` structurally.
 - `Typecheck Python` CI job (mypy, 3.13/3.14 matrix)
+- `gamekit.mc.variance`: antithetic variates (`antithetic` + `paired_mean`)
+  and control variates (`control_variate` + `control_beta`) as
+  Sampler/Evaluator wrappers over the gap-1 fold (mmo-utils DESIGN.md gap 4,
+  #5). Each is tested against a known integrand with negative controls that
+  isolate the correlation effect from the arithmetic of averaging.
 
 ### Changed
 - `gamekit.benchmark`'s docstrings clarify that a "seat" is a competitor slot
