@@ -55,7 +55,7 @@ Core is stdlib + nothing else — no runtime dependencies, including
 `gamekit.mc`'s sampling model: a vectorized sampler returning a numpy
 `ndarray` satisfies `Sampler[T]` structurally (`Callable[[int],
 Iterable[T]]`), so numpy is never imported by gamekit itself. `gamekit.rl`'s
-`[rl]` extra (torch/gymnasium/stable-baselines3) is the only place a
+`[rl]` extra (gymnasium + numpy) is the only place a
 runtime dependency arrives, and only for callers who install that extra.
 
 ## Installation
