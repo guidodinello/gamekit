@@ -19,11 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   kept so already-committed results stay replayable.
 - Initial project bootstrap with dev-standards baseline
 
+### Changed
+- `gamekit.benchmark`'s docstrings clarify that a "seat" is a competitor slot
+  (a single player or a fixed team), not necessarily one player (#11)
+
 ### Deprecated
 - `gamekit.seats.seat_rng_legacy` is deprecated on arrival: it exists only
   to replay pre-0.2.0 results and should not be used in new code.
 
-## [0.1.0] - YYYY-MM-DD
+## [0.1.0] - 2026-09-19
 
 ### Added
 - Project scaffolded
