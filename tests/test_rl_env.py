@@ -8,7 +8,7 @@ see gamekit#7's D5.
 from __future__ import annotations
 
 import random
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 
@@ -41,7 +41,7 @@ class _ScoreReward:
 def _make_env(
     *,
     step_limit: int = 100,
-    on_illegal: str = "coerce",
+    on_illegal: Literal["coerce", "raise"] = "coerce",
     opponent_policy: Any = None,
 ) -> SingleAgentEnv:
     game = FakeGame(num_seats=3, step_limit=step_limit)
@@ -55,7 +55,7 @@ def _make_env(
         num_seats=3,
         agents=agents,
         randomize_seat=False,
-        on_illegal=on_illegal,  # type: ignore[arg-type]
+        on_illegal=on_illegal,
         seed=0,
     )
 
