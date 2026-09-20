@@ -80,32 +80,39 @@ def test_mean_accumulator_projects_arbitrary_sample_types() -> None:
     assert acc.mean == 3.0
 
 
-def test_accumulator_protocol_accepts_a_joint_fold() -> None:
+class _SumBoth:
+    """A plain, ordinary method-based ``Accumulator`` implementation --
+    ``update``/``finalize`` are Protocol methods, so a class satisfies them
+    the same way it satisfies any other Protocol method: no staticmethod
+    wrapping, no ``type: ignore``. Folds a two-tuple ``V`` (unlike
+    ``MeanAccumulator``, which can only ever produce a mean/variance)."""
+
+    init = (0.0, 0.0)
+
+    def update(
+        self, state: tuple[float, float], value: tuple[float, float]
+    ) -> tuple[float, float]:
+        return (state[0] + value[0], state[1] + value[1])
+
+    def finalize(self, state: tuple[float, float]) -> tuple[float, float]:
+        return state
+
+
+def test_accumulator_protocol_accepts_a_plain_method_based_implementation() -> None:
     """Fixes mmo-utils gap 2 fully: a custom accumulator can fold an
     arbitrary V (here, a two-tuple) into any state/result shape, which
-    MeanAccumulator alone cannot express."""
-
-    def update_sums(
-        state: tuple[float, float], sample: tuple[float, float]
-    ) -> tuple[float, float]:
-        return (state[0] + sample[0], state[1] + sample[1])
-
-    class SumBoth:
-        init = (0.0, 0.0)
-        update = staticmethod(update_sums)
-        finalize = staticmethod(lambda s: s)
-
-    # mypy can't structurally match a generic Protocol's Callable attributes
-    # against a class using staticmethod-wrapped functions; isinstance below
-    # is the real (runtime) check that the class satisfies the protocol.
+    MeanAccumulator alone cannot express. A protocol that only a
+    staticmethod-wrapped or `type: ignore`d class can satisfy would be a
+    design bug -- this class is as ordinary as it gets, and this file being
+    mypy-clean is the check."""
     acc: Accumulator[tuple[float, float], tuple[float, float], tuple[float, float]] = (
-        SumBoth()  # type: ignore[assignment]
+        _SumBoth()
     )
     assert isinstance(acc, Accumulator)
 
     state = acc.init
-    for sample in [(1.0, 10.0), (2.0, 20.0), (3.0, 30.0)]:
-        state = acc.update(state, sample)
+    for value in [(1.0, 10.0), (2.0, 20.0), (3.0, 30.0)]:
+        state = acc.update(state, value)
     assert acc.finalize(state) == (6.0, 60.0)
 
 

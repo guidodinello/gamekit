@@ -15,9 +15,23 @@ gap 3 (no confidence intervals for custom accumulators) resolves: any
 accumulator that finalizes into an ``MCResult`` inherits
 ``MCResult.confidence_interval`` for free, no extra plumbing.
 
-``MeanAccumulator`` is catan's ``Accumulator[S]`` (its Welford streaming
-mean/variance implementation), renamed to free the ``Accumulator`` name for
-the protocol above. Behaviour is unchanged.
+``update``/``finalize`` are declared as Protocol **methods**, not
+``Callable``-typed attributes. A generic Protocol's ``Callable``-typed
+attribute checks a member's exact call signature against a plain
+class-attribute lookup, which is brittle for a generic fold (it rejected a
+perfectly ordinary method-based implementation in testing -- a protocol a
+plain class can't satisfy without a ``type: ignore`` is a design bug, not a
+strictness feature). A ``def update(self, state, value) -> state`` method
+matches this protocol the ordinary way any Protocol method does.
+
+``MeanAccumulator`` below is catan's ``Accumulator[S]`` (its Welford
+streaming mean/variance implementation), renamed to free the ``Accumulator``
+name for the protocol above. Behaviour is unchanged, but it does **not**
+structurally satisfy ``Accumulator[V, S, R]`` -- its ``update`` mutates
+``self`` and returns ``None`` rather than folding an explicit state, and it
+has no ``init``/``finalize``. It is kept as its own concrete, ergonomic
+mean/variance accumulator, not as "the ``V = float`` case" of the protocol
+above.
 """
 
 from __future__ import annotations
@@ -41,8 +55,15 @@ class Accumulator[V, S, R](Protocol):
     """
 
     init: S
-    update: Callable[[S, V], S]
-    finalize: Callable[[S], R]
+
+    def update(self, state: S, value: V) -> S:
+        """Fold one evaluation output into ``state``, returning the next
+        state. Pure: does not mutate ``state`` in place."""
+        ...
+
+    def finalize(self, state: S) -> R:
+        """Read a final result out of a state."""
+        ...
 
 
 @dataclass(slots=True)
@@ -51,8 +72,11 @@ class MeanAccumulator[S]:
     ``S``, via a ``value`` projection to ``float``.
 
     The projection is supplied once, at construction, and every ``update``
-    call takes the raw sample (a game record, a per-vertex outcome, whatever)
-    -- this is the ``V = float`` case of the ``Accumulator`` protocol above.
+    call takes the raw sample (a game record, a per-vertex outcome, whatever).
+    This is a concrete, self-mutating convenience accumulator -- it does not
+    itself implement the ``Accumulator[V, S, R]`` protocol above (see that
+    protocol's docstring): its ``update`` mutates ``self`` and returns
+    ``None``, and it has no ``init``/``finalize``.
     """
 
     value: Callable[[S], float]
