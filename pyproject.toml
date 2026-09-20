@@ -1,0 +1,56 @@
+[project]
+name = "gamekit"
+version = "0.1.0"
+description = "Game-agnostic agents, Monte Carlo statistics, and benchmark harness for game-simulation/ML projects"
+readme = "README.md"
+requires-python = ">=3.13"
+authors = [{ name = "Guido Dinello", email = "guido.dinello@gmail.com" }]
+# Deliberately empty: every module in the core is stdlib-only. numpy arrives
+# with the vectorised Sampler (issue #1), torch/gymnasium with the [rl] extra.
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gamekit"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "N", "W", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["gamekit"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.13"
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+strict_optional = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.6.2",
+    "ruff>=0.16.5",
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+]
