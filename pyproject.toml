@@ -16,7 +16,7 @@ dependencies = []
 # gymnasium + numpy only -- gamekit.rl imports no training framework (no
 # torch, stable-baselines3, sb3-contrib), so there is no separate [rl-train]
 # extra. See gamekit#7 / src/gamekit/rl/env.py's module docstring.
-rl = ["gymnasium>=1.0", "numpy>=2.0"]
+rl = ["gymnasium>=1.3.0", "numpy>=2.5.3"]
 
 [build-system]
 requires = ["hatchling"]
