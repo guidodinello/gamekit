@@ -12,16 +12,28 @@ gaps directly:
 - **Gap 3** (no confidence intervals for custom accumulators) -- any
   accumulator that finalizes into ``MCResult`` gets
   ``MCResult.confidence_interval`` for free.
+- **Gap 1** (unify the vectorized/iterative sampling models) -- see
+  ``gamekit.mc.sample``: one ``Sampler -> Evaluator -> Accumulator`` fold,
+  with ``monte_carlo`` a convenience over ``monte_carlo_reduce``.
 
-Gaps 1 (unify the vectorized/iterative sampling models), 4 (variance
-reduction) and 5 (adaptive stopping) are tracked as issues on this repo, not
-addressed here -- see ``docs/shared-ml-package.md`` for links.
+Gaps 4 (variance reduction) and 5 (adaptive stopping) are tracked as issues
+on this repo, not addressed here -- see ``docs/shared-ml-package.md`` for
+links.
 """
 
 from __future__ import annotations
 
 from gamekit.mc.accumulate import Accumulator, MeanAccumulator
 from gamekit.mc.intervals import ConfidenceInterval, MCResult, wilson_interval
+from gamekit.mc.sample import (
+    Evaluator,
+    Sampler,
+    WelfordAccumulator,
+    WelfordState,
+    monte_carlo,
+    monte_carlo_reduce,
+    scalar_sampler,
+)
 from gamekit.mc.sample_size import (
     sample_size_clt,
     sample_size_hoeffding,
@@ -36,12 +48,19 @@ from gamekit.mc.testing import (
 __all__ = [
     "Accumulator",
     "ConfidenceInterval",
+    "Evaluator",
     "MCResult",
     "MeanAccumulator",
+    "Sampler",
     "TwoProportionTest",
+    "WelfordAccumulator",
+    "WelfordState",
     "benjamini_hochberg",
+    "monte_carlo",
+    "monte_carlo_reduce",
     "sample_size_clt",
     "sample_size_hoeffding",
+    "scalar_sampler",
     "two_proportion_sample_size",
     "two_proportion_test",
     "wilson_interval",

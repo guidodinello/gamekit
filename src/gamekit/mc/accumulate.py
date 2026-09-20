@@ -31,7 +31,11 @@ structurally satisfy ``Accumulator[V, S, R]`` -- its ``update`` mutates
 ``self`` and returns ``None`` rather than folding an explicit state, and it
 has no ``init``/``finalize``. It is kept as its own concrete, ergonomic
 mean/variance accumulator, not as "the ``V = float`` case" of the protocol
-above.
+above -- that case is ``gamekit.mc.sample.WelfordAccumulator``, which *does*
+satisfy the protocol and is what ``monte_carlo``/``monte_carlo_reduce`` drive.
+Use ``MeanAccumulator`` when you're folding samples by hand; use
+``WelfordAccumulator`` when a ``Sampler``/``Evaluator`` pair is driving the
+fold for you.
 """
 
 from __future__ import annotations

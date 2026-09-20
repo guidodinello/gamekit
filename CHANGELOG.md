@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Extracted from `truco-py`'s `training/env.py`; see `gamekit.rl.env`'s
   module docstring and `~/projects/docs/shared-ml-package.md` for the
   design history. Closes [#7](https://github.com/guidodinello/gamekit/issues/7).
+- `gamekit.mc.sample`: a unified `Sampler -> Evaluator -> Accumulator`
+  Monte Carlo fold (`monte_carlo_reduce`), with `monte_carlo` as a
+  convenience shortcut over it (mmo-utils DESIGN.md gap 1, #4). Stdlib-only
+  -- no numpy dependency, no `[numpy]` extra; a vectorized sampler returning
+  a numpy `ndarray` satisfies `Sampler[T]` structurally.
+- `Typecheck Python` CI job (mypy, 3.13/3.14 matrix)
 
 ### Changed
 - `gamekit.benchmark`'s docstrings clarify that a "seat" is a competitor slot

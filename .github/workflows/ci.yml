@@ -1,11 +1,15 @@
 # Baseline CI for a small/single-package Python repo — mirrors the pre-commit
 # baseline (templates/pre-commit/python.yaml) as a required gate, since
 # pre-commit itself only runs locally and CI is the only place a required
-# check can actually enforce it. Deliberately just lint + test: no
-# typecheck (add a "Typecheck Python" job with pyright/mypy once the repo
-# has real type-annotation coverage), no path filtering (add
-# dorny/paths-filter once this repo is a monorepo with independent
+# check can actually enforce it. Lint + test + typecheck: no path filtering
+# (add dorny/paths-filter once this repo is a monorepo with independent
 # subprojects — not needed for a single package).
+#
+# Typecheck Python added once the repo had real type-annotation coverage
+# (mypy's `disallow_untyped_defs` etc. in pyproject.toml) — mirrors
+# Tests (Python)'s 3.13/3.14 matrix for the same reason: catch a mypy
+# regression on either supported interpreter, not just whichever one a
+# contributor happens to run locally.
 #
 # Adopt: cp to .github/workflows/ci.yml, fill in the two <FIXME> spots,
 # then add "Lint Python" and "Tests (Python)" as required_status_checks
@@ -86,3 +90,28 @@ jobs:
 
       - name: Run tests
         run: uv run pytest
+
+  typecheck-python:
+    name: Typecheck Python
+    runs-on: ubuntu-latest
+    # Mirror Tests (Python)'s matrix -- a mypy regression on one supported
+    # interpreter and not the other is exactly the kind of thing this job
+    # exists to catch.
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --dev --python ${{ matrix.python-version }}
+
+      - name: mypy
+        run: uv run mypy src tests
