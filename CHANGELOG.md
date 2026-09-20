@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gamekit.seats.seat_rng_legacy` -- the pre-0.2.0 `hash()`-based stream,
   kept so already-committed results stay replayable.
 - Initial project bootstrap with dev-standards baseline
+- `gamekit.rl`: an `[rl]` extra (gymnasium + numpy) providing the reusable
+  structure of a single-agent RL training loop — `SingleAgentEnv`
+  (`gym.Env` subclass, auto-stepping non-learner seats), legal-action
+  masking, and self-play opponent resampling with a baseline-mix fallback.
+  Extracted from `truco-py`'s `training/env.py`; see `gamekit.rl.env`'s
+  module docstring and `~/projects/docs/shared-ml-package.md` for the
+  design history. Closes [#7](https://github.com/guidodinello/gamekit/issues/7).
 
 ### Changed
 - `gamekit.benchmark`'s docstrings clarify that a "seat" is a competitor slot

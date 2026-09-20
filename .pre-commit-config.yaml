@@ -38,5 +38,8 @@ repos:
     hooks:
       - id: mypy
         # The hook's isolated env otherwise lacks pytest, so mypy can't
-        # type-check the fixtures/parametrize usage in tests/.
-        additional_dependencies: ["pytest>=9.1.1"]
+        # type-check the fixtures/parametrize usage in tests/. gymnasium/numpy
+        # are here too so gamekit.rl.env is actually type-checked locally,
+        # not just waved through by the ignore_missing_imports override in
+        # pyproject.toml (gamekit#7).
+        additional_dependencies: ["pytest>=9.1.1", "gymnasium>=1.0", "numpy>=2.0"]
