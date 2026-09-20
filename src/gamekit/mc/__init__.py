@@ -15,10 +15,11 @@ gaps directly:
 - **Gap 1** (unify the vectorized/iterative sampling models) -- see
   ``gamekit.mc.sample``: one ``Sampler -> Evaluator -> Accumulator`` fold,
   with ``monte_carlo`` a convenience over ``monte_carlo_reduce``.
+- **Gap 4** (variance reduction) -- see ``gamekit.mc.variance``: antithetic
+  variates as a sampler wrapper, control variates as an evaluator wrapper.
 
-Gaps 4 (variance reduction) and 5 (adaptive stopping) are tracked as issues
-on this repo, not addressed here -- see ``docs/shared-ml-package.md`` for
-links.
+Gap 5 (adaptive stopping) is tracked as an issue on this repo, not addressed
+here -- see ``docs/shared-ml-package.md`` for links.
 """
 
 from __future__ import annotations
@@ -44,6 +45,7 @@ from gamekit.mc.testing import (
     benjamini_hochberg,
     two_proportion_test,
 )
+from gamekit.mc.variance import antithetic, control_beta, control_variate, paired_mean
 
 __all__ = [
     "Accumulator",
@@ -55,9 +57,13 @@ __all__ = [
     "TwoProportionTest",
     "WelfordAccumulator",
     "WelfordState",
+    "antithetic",
     "benjamini_hochberg",
+    "control_beta",
+    "control_variate",
     "monte_carlo",
     "monte_carlo_reduce",
+    "paired_mean",
     "sample_size_clt",
     "sample_size_hoeffding",
     "scalar_sampler",
