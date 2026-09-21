@@ -71,3 +71,9 @@ dependencies = ["gamekit"]
 [tool.uv.sources]
 gamekit = { git = "https://github.com/guidodinello/gamekit", branch = "main" }
 ```
+
+## Research
+
+Hypotheses, technique notes, and paper citations live in
+[`docs/research/`](docs/research/README.md); per-game experiment logs live
+in the consumer repos.
