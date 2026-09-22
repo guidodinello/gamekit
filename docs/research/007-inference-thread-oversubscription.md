@@ -1,7 +1,7 @@
 # 007 — Inference-worker thread oversubscription
 
 **Status:** validated
-**Last touched:** 2026-09-20
+**Last touched:** 2026-09-21
 
 ## Hypothesis
 
@@ -54,6 +54,13 @@ between `workers=1` and `workers=8`. The authoritative n=4000 gate run
 (see [003](003-discount-horizon.md)) completed in 107.8s with the fix; the
 unfixed 16-worker run it replaced produced zero output in 5+ minutes
 before being killed.
+
+**Tested by:** catan log
+[001](https://github.com/guidodinello/catan/blob/main/docs/experiments/001-ppo-vs-random.md)
+names this fix directly: "A real oversubscription bug was found and fixed
+running this gate benchmark" — the 81.75% [80.5%, 82.9%] n=4000 result
+that log reports is the authoritative gate run this note's fix made
+completable at all.
 
 ## Related notes
 
