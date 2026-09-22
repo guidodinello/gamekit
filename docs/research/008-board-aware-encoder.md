@@ -1,7 +1,7 @@
 # 008 — Board-aware encoder / spatial inductive bias
 
 **Status:** idea
-**Last touched:** 2026-09-20
+**Last touched:** 2026-09-21
 
 ## Hypothesis
 
@@ -47,6 +47,12 @@ than a flat vector of per-entity feature blocks that discards adjacency.
 ## Result
 
 Not yet attempted.
+
+**Motivated by:** catan log
+[003](https://github.com/guidodinello/catan/blob/main/docs/experiments/003-selfplay-v2-baseline-mix-0.5.md)
+names this as an untried direction its own win-rate ceiling motivates
+(12.075% vs `HeuristicAgent`, gate not met) — the log does not test this
+note's hypothesis, it only points at it as a candidate next step.
 
 ## Related notes
 

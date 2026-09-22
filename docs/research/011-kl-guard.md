@@ -1,7 +1,7 @@
 # 011 — KL guard vs the previous snapshot
 
 **Status:** idea
-**Last touched:** 2026-09-20
+**Last touched:** 2026-09-21
 
 ## Hypothesis
 
@@ -56,6 +56,22 @@ the one PPO's own tuning guidance warns about.
 Not yet implemented in either consumer repo. This is a response to
 [005](005-eval-statistics.md)'s finding that truco-py's only stopping rule
 was a manual, coarse "3 consecutive checkpoints < 80%" check.
+
+**Linked from** truco-py logs
+[004](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/004-april-selfplay-collapse.md)
+(verdict: *inconclusive for that specific run* — the KL/clip_fraction
+trace is inferred by analogy to the June run, not independently measured
+from the April tfevents) and
+[005](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/005-june-threshold-mix-collapse.md)
+(verdict: *supports the note, with a caveat the note itself needs to
+carry* — the confirmed measurement is `approx_kl → 0.0` and
+`clip_fraction → 0`, the opposite of a spike; any guard built from this
+note has to watch for the collapse-to-zero signature, not only a rise, as
+already reflected in this note's Hypothesis and How-to-test sections
+above). **Motivated by** catan log
+[003](https://github.com/guidodinello/catan/blob/main/docs/experiments/003-selfplay-v2-baseline-mix-0.5.md),
+which names this note as a higher-effort control deliberately deferred
+from that PR's scope, without implementing or testing it.
 
 ## Related notes
 

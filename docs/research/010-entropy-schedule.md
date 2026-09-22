@@ -1,7 +1,7 @@
 # 010 — Entropy schedule instead of a fixed coefficient
 
 **Status:** idea
-**Last touched:** 2026-09-20
+**Last touched:** 2026-09-21
 
 ## Hypothesis
 
@@ -49,6 +49,15 @@ avoiding an entropy collapse.
 
 Not yet attempted — the CLI flag this would require was never built in
 either consumer repo.
+
+**Linked from** truco-py log
+[005](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/005-june-threshold-mix-collapse.md)
+(verdict: *untested* — the session's proposed `--ent-coef` flag was never
+built and no entropy-schedule run exists in that repo). **Motivated by**
+catan log
+[003](https://github.com/guidodinello/catan/blob/main/docs/experiments/003-selfplay-v2-baseline-mix-0.5.md),
+which names this as an untried direction its own win-rate ceiling
+motivates, without testing it.
 
 ## Related notes
 

@@ -1,7 +1,7 @@
 # 004 — Factored action head via sequential atom composition
 
 **Status:** validated
-**Last touched:** 2026-09-20
+**Last touched:** 2026-09-21
 
 ## Hypothesis
 
@@ -70,6 +70,13 @@ round-trip and DFS-reachability properties swept over 12 full random games
 across all 9 phases, plus 237 passing tests (194 existing + 43 new). Trade
 heads (`ProposeTrade`/`CounterTrade`) are reserved but masked off pending
 [012](012-trade-heads.md).
+
+**Linked from** catan log
+[001](https://github.com/guidodinello/catan/blob/main/docs/experiments/001-ppo-vs-random.md):
+that log's own `**Note:**` targets [003](003-discount-horizon.md), and its
+result is a win-rate gate, not this note's round-trip/DFS test — that
+test already lives in PR #17, cited above. Recorded here as the log that
+trained and benchmarked the policy this note's action head sits under.
 
 ## Related notes
 

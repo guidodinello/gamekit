@@ -1,7 +1,7 @@
 # 002 — Behavior-cloning warm start before PPO
 
 **Status:** planned
-**Last touched:** 2026-09-20
+**Last touched:** 2026-09-21
 
 ## Hypothesis
 
@@ -68,6 +68,17 @@ Three things keep this from being a validated result yet:
 
 Not yet run for any `gamekit` consumer game. truco-py's BC run exists but
 does not answer the question above (see "Why this is `planned`").
+
+**Tested by:** truco-py log
+[002](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/002-bc-warm-start.md),
+verdict *inconclusive*, confirms at the file/line level that the 92.0%
+figure is training-set accuracy: `scripts/pretrain_bc.py:132-135` builds a
+single `TensorDataset`/`DataLoader` over the whole 650,312-pair
+collection, with no train/val split anywhere in the file, and the same
+batches the optimizer just updated on are what `accuracy` is scored
+against inside the same epoch loop. No cold-start-vs-BC-init ablation
+exists in the repo either. This confirms this note's own reasoning above
+rather than adding a new one.
 
 ## Related notes
 

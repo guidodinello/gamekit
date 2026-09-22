@@ -1,7 +1,7 @@
 # 005 — Eval statistics: Wilson intervals and eval-in-loop
 
 **Status:** validated
-**Last touched:** 2026-09-20
+**Last touched:** 2026-09-21
 
 ## Hypothesis
 
@@ -72,8 +72,34 @@ reporting for RL evals, and paid for it in undetected collapses (see
 [001](001-self-play-opponent-mix.md)'s counter-evidence and
 [011](011-kl-guard.md)).
 
+**Tested by:** catan log
+[001](https://github.com/guidodinello/catan/blob/main/docs/experiments/001-ppo-vs-random.md)
+is the source of the 81.75% eval-in-loop gate result above.
+
+**Linked from** three truco-py logs, none of which confirm this note —
+each is recorded here for the numbers, by its own stated verdict, not as
+independent tests of the hypothesis:
+
+- log [001](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/001-mc-threshold-derivation.md)
+  ("does not test this note's hypothesis" — its MC simulations were
+  run to completion at a fixed `n`, not watched in-loop for early
+  collapse, which is the concern this note is actually about).
+- log [006](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/006-seat-rotation-deconfound.md)
+  ("inconclusive on its own terms" — adopted `wilson_interval` for the MC
+  experiments, but the seat-rotation fix itself is a methodology change,
+  not a statistics one, and no post-fix RL win rate was computed at a
+  large enough `n` to confirm or refute anything with the new interval
+  method; see [016](016-positional-advantage-rotation.md)).
+- log [007](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/007-gamekit-rl-adapter-parity.md)
+  ("does not test this note's hypothesis" — a determinism/regression
+  parity check for a refactor, not an experiment measuring whether
+  Wilson intervals or eval-in-loop monitoring improve anything; it is,
+  incidentally, the first post-rotation RL benchmark with a computed
+  Wilson interval, 79.0% [72.8%, 84.1%] vs `ThresholdAgent`, n=200).
+
 ## Related notes
 
 - [001 — Self-play opponent mix vs a fixed baseline](001-self-play-opponent-mix.md)
 - [006 — Uniform-over-atoms baseline is not `RandomAgent`](006-uniform-atoms-baseline.md)
 - [011 — KL guard vs the previous snapshot](011-kl-guard.md)
+- [016 — Positional (mano) advantage must be rotated out of a benchmark arm](016-positional-advantage-rotation.md)

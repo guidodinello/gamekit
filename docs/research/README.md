@@ -68,3 +68,7 @@ sections are a floor, not a ceiling.
 | [010](010-entropy-schedule.md) | Entropy schedule instead of a fixed coefficient | idea | 2026-09-20 |
 | [011](011-kl-guard.md) | KL guard vs the previous snapshot | idea | 2026-09-20 |
 | [012](012-trade-heads.md) | Enable the reserved trade heads | idea | 2026-09-20 |
+| [013](013-selfplay-pool-contamination.md) | Self-play pool contamination across runs | validated | 2026-09-21 |
+| [014](014-per-hand-vs-match-win-rate.md) | Per-hand win-rate ceiling vs match-play compounding | idea | 2026-09-21 |
+| [015](015-shaped-reward-breaks-rew-proxy.md) | Reward shaping invalidates the `ep_rew_mean` win-rate proxy | validated | 2026-09-21 |
+| [016](016-positional-advantage-rotation.md) | Positional (mano) advantage must be rotated out of a benchmark arm | validated (mechanism) | 2026-09-21 |
