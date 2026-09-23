@@ -1,7 +1,7 @@
 # 008 — Board-aware encoder / spatial inductive bias
 
 **Status:** idea
-**Last touched:** 2026-09-21
+**Last touched:** 2026-09-23
 
 ## Hypothesis
 
@@ -54,6 +54,24 @@ names this as an untried direction its own win-rate ceiling motivates
 (12.075% vs `HeuristicAgent`, gate not met) — the log does not test this
 note's hypothesis, it only points at it as a candidate next step.
 
+catan log
+[004](https://github.com/guidodinello/catan/blob/main/docs/experiments/004-bc-warm-start.md)
+strengthens this motivation with a specific number: cloning `HeuristicAgent`
+by cross-entropy reached 87.4% overall val masked accuracy, but the three
+weakest blocks were exactly the spatial placement decisions this note is
+about — `vertex_settlement` **51.6%**, `edge` **55.4%**, `hex` **50.5%** —
+each a many-way argmax over a continuous score with frequent near-ties,
+against a much stronger 76-95% on the non-spatial blocks. The train/val gap
+on those blocks is only ~8 points, so log 004 attributes the shortfall to
+base-task difficulty (a flat encoder failing to generalize the spatial
+decision), not to data scarcity that more games would fix — and names a
+richer, board-aware encoding of the spatial decision as one of the two ways
+to raise that ceiling (the other being to accept BC's ceiling on this action
+family as intrinsically below what a perfect clone needs). Still not tested:
+this is a specific number strengthening the motivation, not an experiment
+against this note's hypothesis.
+
 ## Related notes
 
+- [002 — Behavior-cloning warm start before PPO](002-bc-warm-start.md)
 - [004 — Factored action head via sequential atom composition](004-factored-action-head.md)
