@@ -57,18 +57,19 @@ sections are a floor, not a ceiling.
 | id | title | status | last touched |
 |---|---|---|---|
 | [001](001-self-play-opponent-mix.md) | Self-play opponent mix vs a fixed baseline | running | 2026-09-20 |
-| [002](002-bc-warm-start.md) | Behavior-cloning warm start before PPO | planned | 2026-09-20 |
+| [002](002-bc-warm-start.md) | Behavior-cloning warm start before PPO | running | 2026-09-23 |
 | [003](003-discount-horizon.md) | Discount horizon vs episode length | validated | 2026-09-20 |
 | [004](004-factored-action-head.md) | Factored action head via sequential atom composition | validated | 2026-09-20 |
 | [005](005-eval-statistics.md) | Eval statistics: Wilson intervals and eval-in-loop | validated | 2026-09-20 |
 | [006](006-uniform-atoms-baseline.md) | Uniform-over-atoms baseline is not `RandomAgent` | validated | 2026-09-20 |
 | [007](007-inference-thread-oversubscription.md) | Inference-worker thread oversubscription | validated | 2026-09-20 |
-| [008](008-board-aware-encoder.md) | Board-aware encoder / spatial inductive bias | idea | 2026-09-20 |
-| [009](009-longer-runs-and-resume.md) | Longer runs / resume when the curve has not bent | idea | 2026-09-20 |
-| [010](010-entropy-schedule.md) | Entropy schedule instead of a fixed coefficient | idea | 2026-09-20 |
-| [011](011-kl-guard.md) | KL guard vs the previous snapshot | idea | 2026-09-20 |
+| [008](008-board-aware-encoder.md) | Board-aware encoder / spatial inductive bias | idea | 2026-09-23 |
+| [009](009-longer-runs-and-resume.md) | Longer runs / resume when the curve has not bent | idea | 2026-09-23 |
+| [010](010-entropy-schedule.md) | Entropy schedule instead of a fixed coefficient | idea | 2026-09-23 |
+| [011](011-kl-guard.md) | KL guard vs the previous snapshot | idea | 2026-09-23 |
 | [012](012-trade-heads.md) | Enable the reserved trade heads | idea | 2026-09-20 |
 | [013](013-selfplay-pool-contamination.md) | Self-play pool contamination across runs | validated | 2026-09-21 |
 | [014](014-per-hand-vs-match-win-rate.md) | Per-hand win-rate ceiling vs match-play compounding | idea | 2026-09-21 |
 | [015](015-shaped-reward-breaks-rew-proxy.md) | Reward shaping invalidates the `ep_rew_mean` win-rate proxy | validated | 2026-09-21 |
 | [016](016-positional-advantage-rotation.md) | Positional (mano) advantage must be rotated out of a benchmark arm | validated (mechanism) | 2026-09-21 |
+| [017](017-amdahl-ceiling-and-real-batch-size.md) | Measure the Amdahl ceiling and the real batch size before building an inference server | validated | 2026-09-23 |

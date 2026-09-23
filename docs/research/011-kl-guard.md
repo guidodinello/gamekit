@@ -1,7 +1,7 @@
 # 011 — KL guard vs the previous snapshot
 
 **Status:** idea
-**Last touched:** 2026-09-21
+**Last touched:** 2026-09-23
 
 ## Hypothesis
 
@@ -73,8 +73,18 @@ above). **Motivated by** catan log
 which names this note as a higher-effort control deliberately deferred
 from that PR's scope, without implementing or testing it.
 
+**Motivated by** catan log
+[004](https://github.com/guidodinello/catan/blob/main/docs/experiments/004-bc-warm-start.md)
+as well: its follow-up section names "a KL guard against the clone's own
+initial policy, which might damp the 10.5-20% oscillation seen here" as an
+untried direction, without implementing or testing it — a narrower proposal
+than this note's "guard vs the previous snapshot," anchoring the guard to
+the BC clone's starting policy specifically rather than a rolling recent
+checkpoint.
+
 ## Related notes
 
 - [001 — Self-play opponent mix vs a fixed baseline](001-self-play-opponent-mix.md)
+- [002 — Behavior-cloning warm start before PPO](002-bc-warm-start.md)
 - [005 — Eval statistics: Wilson intervals and eval-in-loop](005-eval-statistics.md)
 - [010 — Entropy schedule instead of a fixed coefficient](010-entropy-schedule.md)

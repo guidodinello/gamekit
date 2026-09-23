@@ -1,7 +1,7 @@
 # 009 — Longer runs / resume when the curve has not bent
 
 **Status:** idea
-**Last touched:** 2026-09-21
+**Last touched:** 2026-09-23
 
 ## Hypothesis
 
@@ -74,7 +74,18 @@ ceiling for this configuration within the budget used, not a
 still-climbing curve" but explicitly leaves open "whether more steps at
 the same settings would eventually break out."
 
+**Motivated by** catan log
+[004](https://github.com/guidodinello/catan/blob/main/docs/experiments/004-bc-warm-start.md),
+whose BC-warm-start fine-tune oscillated in a 10.5-20.0% band vs
+`HeuristicAgent` for its entire 3,000,000-step run without `RegressionGuard`
+ever triggering a stop — every dip stayed within its margin of the running
+best, so the run's own follow-up section names this note's question
+directly: "would more fine-tune steps past 3M keep climbing, given the run
+never regressed enough to stop?" Not tested — log 004 stopped at its
+pre-set step ceiling, not because the curve had bent.
+
 ## Related notes
 
 - [001 — Self-play opponent mix vs a fixed baseline](001-self-play-opponent-mix.md)
+- [002 — Behavior-cloning warm start before PPO](002-bc-warm-start.md)
 - [005 — Eval statistics: Wilson intervals and eval-in-loop](005-eval-statistics.md)

@@ -1,7 +1,7 @@
 # 010 — Entropy schedule instead of a fixed coefficient
 
 **Status:** idea
-**Last touched:** 2026-09-21
+**Last touched:** 2026-09-23
 
 ## Hypothesis
 
@@ -59,7 +59,17 @@ catan log
 which names this as an untried direction its own win-rate ceiling
 motivates, without testing it.
 
+**Motivated by** catan log
+[004](https://github.com/guidodinello/catan/blob/main/docs/experiments/004-bc-warm-start.md)
+too: its BC-warm-start fine-tune used a fixed `ent_coef=0.01` from step 0
+(deliberately gentler than 003's 0.02, chosen to protect the clone from
+early entropy-driven collapse) and still oscillated 10.5-20.0% for the
+entire run — the log's own follow-up section names "an entropy schedule
+instead of the fixed 0.01 used here" as an untried direction, without
+testing it.
+
 ## Related notes
 
 - [001 — Self-play opponent mix vs a fixed baseline](001-self-play-opponent-mix.md)
+- [002 — Behavior-cloning warm start before PPO](002-bc-warm-start.md)
 - [011 — KL guard vs the previous snapshot](011-kl-guard.md)
