@@ -1,7 +1,7 @@
 # 014 — Per-hand win-rate ceiling vs match-play compounding
 
 **Status:** idea
-**Last touched:** 2026-09-21
+**Last touched:** 2026-09-27
 
 ## Hypothesis
 
@@ -64,9 +64,13 @@ reported `n` and interval.
   level; a per-hand number should be reported alongside as context, not
   substituted for it.
 - **Cost estimate:** near zero beyond an existing benchmark run — the
-  same games already played can be scored at both units if the harness
-  tracks match boundaries, which `gamekit.benchmark` already does via its
-  `n_games` unit.
+  same games already played can be scored at both units, but only if the
+  consumer records hand outcomes inside each match result.
+  `gamekit.benchmark.run_arm` does not track match boundaries itself: its
+  unit is whatever one `play` result is (one `winning_seat` per result,
+  `n_games` results per arm), so a match-level arm yields the per-match
+  rate directly and the per-hand rate has to be computed by the consumer
+  from its own result records.
 
 ## Result
 

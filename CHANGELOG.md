@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `docs/research/`: a git-tracked logbook of game-agnostic technique notes
+  (hypothesis, citations, how to test, result), with a note template and an
+  experiment-log template for consumer repos (#26, #27, #28).
+
+### Changed
+- CI jobs pick their runner from the `CI_RUNNERS` repository variable,
+  falling back to `ubuntu-latest` when unset (#25).
+
 ## [0.3.0] - 2026-09-20
 
 ### Added
@@ -25,6 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   opponent by every later run. Passing `run_id` scopes the pool to a single
   run's subdirectory, so a stale checkpoint from a different run can no
   longer be drawn. Closes #23.
+
+### Changed
+- CI gains a dedicated, required `RL extra` job that installs the `[rl]`
+  extra and runs pytest and mypy against real gymnasium/numpy (#22).
 
 ## [0.2.0] - 2026-09-20
 

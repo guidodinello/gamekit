@@ -13,14 +13,17 @@ history.
 ## Modules
 
 - `gamekit.agent` — the `Agent[StateT, ActionT]` protocol.
-- `gamekit.mc` — confidence intervals, sample-size formulas, two-proportion
-  testing, and streaming accumulators (stdlib-only), plus one unified Monte
-  Carlo sampling model: `monte_carlo`/`monte_carlo_reduce` (a
+- `gamekit.mc` — confidence intervals (including `wilson_interval`),
+  sample-size formulas, two-proportion testing with Benjamini–Hochberg
+  multiple-comparison correction, and streaming accumulators (stdlib-only),
+  plus one unified Monte Carlo sampling model: `monte_carlo`/`monte_carlo_reduce` (a
   `Sampler -> Evaluator -> Accumulator` fold, admitting both scalar and
   vectorized samplers with no numpy dependency), variance reduction
   (`antithetic`, `control_variate`), and adaptive stopping
   (`monte_carlo_until`, run until a target confidence-interval half-width).
-- `gamekit.seats` — seat-keyed RNG streams and lineup rotation.
+- `gamekit.seats` — seat-keyed RNG streams (`seat_rng`, plus the deprecated
+  pre-0.2.0 `seat_rng_legacy` for replaying old results), lineup rotation,
+  and seat-occupancy counting.
 - `gamekit.results` — git-commit-stamped JSON result files.
 - `gamekit.benchmark` — a field-free benchmark-arm runner: mandatory seat
   rotation, win-rate summaries by role and by seat, a two-proportion
@@ -32,7 +35,8 @@ history.
   non-learner seat until the learner must act — stdlib),
   `gamekit.rl.selfplay` (`OpponentPool`, checkpoint resampling with a
   baseline-mix fallback, run-scoped via `run_id` — stdlib),
-  `gamekit.rl.masking` (legal-action mask building — stdlib), and
+  `gamekit.rl.masking` (legal-action mask building and coercing an illegal
+  index to a legal one — stdlib), and
   `gamekit.rl.env` (`SingleAgentEnv`, a `gym.Env`
   subclass — needs `gymnasium`/`numpy`, the only submodule that does).
   `gamekit.rl` never imports a training framework (no torch, no
@@ -70,6 +74,19 @@ dependencies = ["gamekit"]
 
 [tool.uv.sources]
 gamekit = { git = "https://github.com/guidodinello/gamekit", branch = "main" }
+```
+
+For `gamekit.rl.env`, depend on the `[rl]` extra instead:
+`dependencies = ["gamekit[rl]"]`.
+
+## Development
+
+```sh
+uv sync --dev                 # add `--extra rl` to exercise gamekit.rl.env
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy src tests
+uv run pytest
 ```
 
 ## Research
