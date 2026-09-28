@@ -66,9 +66,9 @@ sections are a floor, not a ceiling.
 | [006](006-uniform-atoms-baseline.md) | Uniform-over-atoms baseline is not `RandomAgent` | validated | 2026-09-20 |
 | [007](007-inference-thread-oversubscription.md) | Inference-worker thread oversubscription | validated | 2026-09-21 |
 | [008](008-board-aware-encoder.md) | Board-aware encoder / spatial inductive bias | idea | 2026-09-23 |
-| [009](009-longer-runs-and-resume.md) | Longer runs / resume when the curve has not bent | idea | 2026-09-23 |
-| [010](010-entropy-schedule.md) | Entropy schedule instead of a fixed coefficient | idea | 2026-09-23 |
-| [011](011-kl-guard.md) | KL guard vs the previous snapshot | idea | 2026-09-23 |
+| [009](009-longer-runs-and-resume.md) | Longer runs / resume when the curve has not bent | planned | 2026-09-27 |
+| [010](010-entropy-schedule.md) | Entropy schedule instead of a fixed coefficient | planned | 2026-09-27 |
+| [011](011-kl-guard.md) | KL guard vs the previous snapshot | planned | 2026-09-27 |
 | [012](012-trade-heads.md) | Enable the reserved trade heads | idea | 2026-09-20 |
 | [013](013-selfplay-pool-contamination.md) | Self-play pool contamination across runs | validated | 2026-09-21 |
 | [014](014-per-hand-vs-match-win-rate.md) | Per-hand win-rate ceiling vs match-play compounding | idea | 2026-09-27 |

@@ -1,7 +1,7 @@
 # 011 — KL guard vs the previous snapshot
 
-**Status:** idea
-**Last touched:** 2026-09-23
+**Status:** planned
+**Last touched:** 2026-09-27
 
 ## Hypothesis
 
@@ -34,26 +34,105 @@ the one PPO's own tuning guidance warns about.
   (entropy/KL/clip-fraction all collapsing toward zero together), not only
   for divergence blowing up.
 
+## Refinement (2026-09-27)
+
+- **What we'd actually build is a policy-freeze detector, not a KL
+  guard.** SB3's `approx_kl` measures how far the old policy moved to
+  the new one *within one update*, i.e. step size. It is not a KL
+  against an earlier snapshot. The collapse we've seen shows up as the
+  step size and entropy going flat together, so the first thing to build
+  reads metrics SB3 already logs. A true snapshot KL (masked KL between
+  the live policy and a checkpoint N chunks back, on a fixed probe set
+  of observations) is a later phase, only needed if phase 1 misses a
+  collapse. The filename keeps "KL guard" for link stability.
+- **Calibrated against the real collapse.** truco-py commits its June
+  run's SB3 console output (`logs/train_selfplay_gpu.log`): 143 PPO
+  updates of 8,192 steps each, from 5.71M to 6.89M total steps. Healthy
+  updates 0–60 sit at `abs(entropy_loss)` 0.14–0.195 and `clip_fraction`
+  0.008–0.020. Candidate rules, replayed offline (no external source;
+  computed from that log):
+
+  | Rule | Fires at update | Total steps |
+  |---|---|---|
+  | `abs(entropy_loss)` **and** `clip_fraction` both < 50% of their trailing-20-update median, 3 consecutive updates | 74 | 6,324,224 |
+  | same, < 25% of trailing median | 126 | 6,758,400 |
+  | absolute near-zero (`abs(entropy_loss)` < 1e-3, `clip_fraction` < 1e-3, `approx_kl` < 1e-4) | 124 | 6,742,016 |
+  | (manual kill, per truco-py log 005) | — | ~6.89M |
+
+  The 50% trailing-median rule fires about **420k steps (~52 updates)
+  before** "everything is zero" and doesn't fire on the healthy
+  prefix. The 25% variant fires late for an instructive reason: a
+  trailing median follows a gradual decline downward, so a tight ratio
+  never trips until the very end.
+- **Why trailing, not a frozen early baseline:** catan's healthy v1 run
+  lowered `entropy_loss` from −0.287 to −0.168 over the whole run
+  (catan log 002), a 41% drop. A baseline frozen at the start with a
+  50% threshold would be uncomfortably close to firing on normal
+  policy sharpening. A trailing window allows slow decline and catches
+  fast decline, and fast decline is what the collapse looks like.
+- **Why this complements `RegressionGuard` instead of duplicating it:**
+  catan's `RegressionGuard` looks at the win rate every 250k steps and
+  needs `patience=2` consecutive qualifying evals, so it can't stop
+  sooner than ~500k steps after a real drop. It also sees noisy n=200
+  evals (see [009](009-longer-runs-and-resume.md)'s refinement). The
+  detector looks at every 8,192-step update and needs 3 of them.
+- **Dropped from scope: "a KL anchor to damp catan log 004's
+  oscillation."** That band is flat within noise (χ²=11.7, df=11,
+  p=0.39; see 009), so there's no oscillation to damp. A KL *penalty*
+  toward the BC clone is also a regularizer, not a guard. If it's worth
+  pursuing, it gets its own note with its own motivation.
+
 ## How to test
 
-- **Metric:** `approx_kl`, `clip_fraction`, and `entropy_loss` tracked
-  per training iteration against a rolling recent-snapshot baseline.
-- **Gate:** the guard fires (pauses or rolls back training) on the
-  truco-py collapse signature — all three going toward zero together —
-  within some bounded number of iterations of it starting, without firing
-  on healthy runs (e.g. the stable metrics reported for catan's v1
-  self-play run in [001](001-self-play-opponent-mix.md):
-  `entropy_loss -0.29 → -0.17`, `approx_kl 0.002–0.004` — no external
-  source; observed in the 2026-09-20 self-play v1 run, catan branch
-  `phase5-rl-selfplay` (unmerged); these are not from a merged catan PR).
-- **Cost estimate:** low to implement (a callback reading metrics SB3
-  already reports), needs at least one intentionally-triggered collapse
-  run (or a replay of truco-py's logged one) to validate the trigger
-  condition before trusting it on a real run.
+**Build (split along gamekit's framework boundary):**
+
+- **gamekit:** a framework-free `PolicyFreezeDetector` (e.g. in
+  `gamekit.rl`) with `observe(entropy, clip_fraction, approx_kl) -> bool`.
+  Its parameters are `window=20`, `ratio=0.5`, `patience=3`, plus a
+  warm-up so it can't fire before the window fills. Unit-test it against
+  the 143-row trajectory above, stored as a small CSV fixture parsed
+  from truco-py's log: it must fire at update 74 and must not fire on
+  updates 0–60. Add synthetic negative controls: slow linear decay,
+  noise around a constant, and a single-update dip.
+- **Consumers (catan first, then truco-py):** an SB3 callback that
+  feeds the detector once per update. It reads `train/entropy_loss`,
+  `train/clip_fraction` and `train/approx_kl` from
+  `self.logger.name_to_value` in `_on_rollout_end`. In SB3's
+  `OnPolicyAlgorithm.learn` loop, the previous update's `train/*`
+  values are recorded but not yet dumped at that point. Confirm that
+  ordering with a test against the pinned sb3 2.9 before relying on it.
+  On a fire, the callback returns `False` from the next `_on_step`, and
+  `rl/train.py` treats it like a `RegressionGuard` stop
+  (`stopped_early=True`, best checkpoint kept).
+
+- **Metric:** detection lead time (steps between the detector firing and
+  the absolute-near-zero point) and the false-fire count on healthy runs.
+- **Gate:**
+  1. *Offline, positive:* fires at least 300k steps before the absolute
+     near-zero point on truco-py's June trajectory. The calibration
+     above gives ~420k.
+  2. *Offline, negative:* zero fires when catan logs 002–004's
+     tfevents are replayed through it (`rl_runs/tb/`, gitignored, so
+     this depends on them still being on disk), and on truco-py's
+     healthy prefix.
+  3. *Online:* on a collapse triggered on purpose, the detector stops
+     the run within 3 updates of the threshold being crossed and before
+     `RegressionGuard` would have. Either
+     [010](010-entropy-schedule.md)'s 010a clean-pool control, if it
+     collapses, or a deliberately contaminated run (an *unscoped*
+     `OpponentPool` over a directory holding truco-py's collapsed
+     `truco_selfplay_final.zip`, the mechanism
+     [013](013-selfplay-pool-contamination.md) validated) serves as the
+     positive case.
+- **Cost estimate:** gates 1 and 2 need no training: about half a day
+  for the gamekit detector, fixture and tests, plus the catan callback.
+  Gate 3 costs one ~1M-step truco-py run, which can be the same run as
+  010a's control.
 
 ## Result
 
-Not yet implemented in either consumer repo. This is a response to
+Not yet implemented in either consumer repo; the detector's offline
+calibration above is a design input, not a result. This note is a response to
 [005](005-eval-statistics.md)'s finding that truco-py's only stopping rule
 was a manual, coarse "3 consecutive checkpoints < 80%" check.
 
@@ -87,4 +166,6 @@ checkpoint.
 - [001 — Self-play opponent mix vs a fixed baseline](001-self-play-opponent-mix.md)
 - [002 — Behavior-cloning warm start before PPO](002-bc-warm-start.md)
 - [005 — Eval statistics: Wilson intervals and eval-in-loop](005-eval-statistics.md)
+- [009 — Longer runs / resume when the curve has not bent](009-longer-runs-and-resume.md)
 - [010 — Entropy schedule instead of a fixed coefficient](010-entropy-schedule.md)
+- [013 — Self-play pool contamination across runs](013-selfplay-pool-contamination.md)
