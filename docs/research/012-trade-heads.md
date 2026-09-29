@@ -55,6 +55,39 @@ catan issue [#28](https://github.com/guidodinello/catan/issues/28):
   n=4000 rl-vs-heuristic benchmark. This is temporary; see
   [018](018-human-baseline-sanity-check.md).
 
+## End-to-end joint training (intended long-term path)
+
+Guido's stated long-term intent (2026-09-29): unmask the trade heads and
+train strategy and trading jointly, as one policy, against opponents that
+trade, so the two co-adapt. Guido calls this the purest path. It is what
+this note's hypothesis already describes; this section records that it is
+the direction we intend to implement, not just a candidate.
+
+- **Rationale:** co-adaptation (what a trade is worth depends on the
+  strategic plan, and the plan depends on which trades are available) and
+  no hand-designed module boundary to get wrong — no external source;
+  reasoning about the game, untested.
+- **Risks:**
+  - *Sparse trade reward:* trades are rare next to other decisions and
+    pay off only through the eventual win.
+  - *Non-stationary trading opponents:* if opponents are also learning
+    (self-play with unmasked heads), the counterparty distribution keeps
+    moving.
+  - *Harder credit assignment:* a trade's effect shows up many turns later.
+  - *Larger action space:* the give/receive heads enlarge the head that
+    has to be learned within a comparable budget.
+- **Shared prerequisite:** opponents that actually propose trades, plus a
+  trade-aware benchmark (catan
+  [#28](https://github.com/guidodinello/catan/issues/28)). Without them
+  the accept/reject head gets no gradient and the propose/counter heads
+  have nobody to trade with.
+- **Relation to [020](020-modular-trade-agent.md):** the modular stages
+  there are stepping stones and baselines for this path, not a
+  replacement. For example, 020 stage 1 (value-priced responses with no
+  trade training) is the baseline end-to-end training has to beat.
+  Human data ([019](019-human-catan-game-data.md)) could supply
+  trading-opponent behavior or an acceptance model for either path.
+
 ## How to test
 
 - **Metric:** win rate vs opponents that propose trades (at minimum
@@ -83,3 +116,5 @@ trading.
 
 - [004 — Factored action head via sequential atom composition](004-factored-action-head.md)
 - [018 — Human baseline as a sanity check for learned / hand-written agents](018-human-baseline-sanity-check.md)
+- [019 — Human Catan game data as a training source](019-human-catan-game-data.md)
+- [020 — Modular agent: separate trade module over a strategy policy](020-modular-trade-agent.md)
