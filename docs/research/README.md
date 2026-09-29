@@ -63,16 +63,17 @@ sections are a floor, not a ceiling.
 | [002](002-bc-warm-start.md) | Behavior-cloning warm start before PPO | running | 2026-09-23 |
 | [003](003-discount-horizon.md) | Discount horizon vs episode length | validated | 2026-09-20 |
 | [004](004-factored-action-head.md) | Factored action head via sequential atom composition | validated | 2026-09-21 |
-| [005](005-eval-statistics.md) | Eval statistics: Wilson intervals and eval-in-loop | validated | 2026-09-21 |
+| [005](005-eval-statistics.md) | Eval statistics: Wilson intervals and eval-in-loop | validated | 2026-09-29 |
 | [006](006-uniform-atoms-baseline.md) | Uniform-over-atoms baseline is not `RandomAgent` | validated | 2026-09-20 |
 | [007](007-inference-thread-oversubscription.md) | Inference-worker thread oversubscription | validated | 2026-09-21 |
 | [008](008-board-aware-encoder.md) | Board-aware encoder / spatial inductive bias | idea | 2026-09-23 |
 | [009](009-longer-runs-and-resume.md) | Longer runs / resume when the curve has not bent | tested (inconclusive) | 2026-09-29 |
 | [010](010-entropy-schedule.md) | Entropy schedule instead of a fixed coefficient | planned | 2026-09-27 |
 | [011](011-kl-guard.md) | KL guard vs the previous snapshot | planned | 2026-09-27 |
-| [012](012-trade-heads.md) | Enable the reserved trade heads | idea | 2026-09-20 |
+| [012](012-trade-heads.md) | Enable the reserved trade heads | idea | 2026-09-29 |
 | [013](013-selfplay-pool-contamination.md) | Self-play pool contamination across runs | validated | 2026-09-21 |
 | [014](014-per-hand-vs-match-win-rate.md) | Per-hand win-rate ceiling vs match-play compounding | idea | 2026-09-27 |
 | [015](015-shaped-reward-breaks-rew-proxy.md) | Reward shaping invalidates the `ep_rew_mean` win-rate proxy | validated | 2026-09-21 |
 | [016](016-positional-advantage-rotation.md) | Positional (mano) advantage must be rotated out of a benchmark arm | validated (mechanism) | 2026-09-21 |
 | [017](017-amdahl-ceiling-and-real-batch-size.md) | Measure the Amdahl ceiling and the real batch size before building an inference server | validated | 2026-09-23 |
+| [018](018-human-baseline-sanity-check.md) | Human baseline as a sanity check for learned / hand-written agents | planned | 2026-09-29 |

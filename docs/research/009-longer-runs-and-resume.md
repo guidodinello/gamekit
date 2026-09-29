@@ -78,6 +78,31 @@ run. It also changed what the question is.
   fixed seed (`rl/train.py:380`) but not that it explains any of the gap.
   See also [005](005-eval-statistics.md) — no external source; observed in
   catan log 006 and issue #25.
+
+  **Update (2026-09-29): the fixed-seed reuse is now addressed; the
+  selection bias is not.** catan
+  [PR #27](https://github.com/guidodinello/catan/pull/27) (merged as
+  `95c59d8`, closes #25) makes the rate that picks `best_checkpoint` a
+  fresh n=200 sample at `cfg.seed + 977 + step`, and keeps the fixed
+  paired set only for the regression guard (design in
+  [005](005-eval-statistics.md#in-loop-eval-design-2026-09-29-catan-pr-27)).
+  That removes the replay of one 200-game sample from checkpoint
+  selection. It does nothing about the maximum being taken over about 40
+  noisy evals, so the best reported rate is still biased upward and the
+  n=4000 confirmation stays mandatory. Nothing here says the replay
+  explained any of the 004 or 006 gaps; #25 verified the mechanism, not
+  its size.
+
+  **Hypothesis for future runs (to test, not a result):** if the replay
+  contributed, a run made after #27 should show a smaller gap between its
+  reported in-loop best and that checkpoint's n=4000 rate than 004 (3.8
+  points, maximum over 12 evals) and 006 (7.6 points, maximum over 40),
+  once the number of evals is taken into account. If the gap stays about
+  as large as the eval count alone would predict, the replay was not a
+  material contributor. The new `reported=` / `guard(fixed)=` log line
+  exposes the guard-versus-reported gap at every checkpoint, so the
+  divergence between the two can be read off the next log without extra
+  instrumentation. No external source; observed in catan PR #27.
 - **Two gaps in catan's `--resume` path that a multi-leg run hits**
   (catan `rl/train.py` at the time of writing):
   1. `RegressionGuard` starts from `best_rate=-1.0` on every invocation.

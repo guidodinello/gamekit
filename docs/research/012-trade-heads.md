@@ -1,7 +1,7 @@
 # 012 — Enable the reserved trade heads
 
 **Status:** idea
-**Last touched:** 2026-09-20
+**Last touched:** 2026-09-29
 
 ## Hypothesis
 
@@ -24,6 +24,37 @@ of a mechanic its opponents use freely.
   catan `experiments/results/benchmark_rl_vs_random_p4.json`'s
   `known_biases[3]` (PR #18).
 
+## Refinement (2026-09-29)
+
+Found while planning catan experiment 007 (catan
+[PR #29](https://github.com/guidodinello/catan/pull/29)) and tracked in
+catan issue [#28](https://github.com/guidodinello/catan/issues/28):
+
+- **The accept/reject atoms are live but untrained.** Only the
+  propose/counter sentinels are masked. The RL agent still has live
+  accept and reject atoms, but no training opponent ever proposed a trade
+  to it: behavior cloning copied a `HeuristicAgent` that never proposes
+  and always rejects, and the self-play opponents (heuristic and RL) never
+  propose either. Those atoms have therefore received no gradient in this
+  checkpoint's lineage. The issue text that called them "masked" was
+  inaccurate — no external source; observed in catan PR #29.
+- **Trading opponents are a prerequisite, not just unmasking.** Flipping
+  the mask alone would leave the accept/reject head untrained, and the
+  propose/counter heads would have nobody to trade with. Training needs at
+  least one opponent that proposes: a trading heuristic variant, RL
+  self-play with the heads unmasked, or both (catan #28).
+- **Bearing on the gate below.** The vs-`RandomAgent` benchmarks did
+  exercise the untrained accept head, because `RandomAgent`s propose;
+  the vs-`HeuristicAgent` benchmark did not. So the two benchmarks differ
+  in more than opponent strength, and catan #28 also asks for a
+  trade-aware benchmark plus trade frequency and acceptance stats.
+- **Interim handling.** Catan log
+  [007](https://github.com/guidodinello/catan/blob/main/docs/experiments/007-human-games.md)
+  forces the `rl` seat's trade responses to reject
+  (`trade_policy: "reject_all"`), which matches the conditions of the
+  n=4000 rl-vs-heuristic benchmark. This is temporary; see
+  [018](018-human-baseline-sanity-check.md).
+
 ## How to test
 
 - **Metric:** win rate vs opponents that propose trades (at minimum
@@ -38,8 +69,17 @@ of a mechanic its opponents use freely.
 
 ## Result
 
-Not yet attempted — the heads remain masked off as of catan PR #17/#18.
+Not yet attempted — the propose/counter heads remain masked off as of
+catan PR #29, and no trading opponent exists in training. Tracked by
+catan [#28](https://github.com/guidodinello/catan/issues/28).
+
+**Linked from** catan log
+[007](https://github.com/guidodinello/catan/blob/main/docs/experiments/007-human-games.md),
+which does not test this note: it forces reject on the `rl` seat and
+names a trade-learning agent as the condition for a fair human match with
+trading.
 
 ## Related notes
 
 - [004 — Factored action head via sequential atom composition](004-factored-action-head.md)
+- [018 — Human baseline as a sanity check for learned / hand-written agents](018-human-baseline-sanity-check.md)
