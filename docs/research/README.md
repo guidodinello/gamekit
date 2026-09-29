@@ -77,3 +77,5 @@ sections are a floor, not a ceiling.
 | [016](016-positional-advantage-rotation.md) | Positional (mano) advantage must be rotated out of a benchmark arm | validated (mechanism) | 2026-09-21 |
 | [017](017-amdahl-ceiling-and-real-batch-size.md) | Measure the Amdahl ceiling and the real batch size before building an inference server | validated | 2026-09-23 |
 | [018](018-human-baseline-sanity-check.md) | Human baseline as a sanity check for learned / hand-written agents | planned | 2026-09-29 |
+| [019](019-human-catan-game-data.md) | Human Catan game data as a training source | idea | 2026-09-29 |
+| [020](020-modular-trade-agent.md) | Modular agent: separate trade module over a strategy policy | idea | 2026-09-29 |

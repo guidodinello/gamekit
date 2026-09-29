@@ -83,3 +83,5 @@ issue #26).
 - [005 — Eval statistics: Wilson intervals and eval-in-loop](005-eval-statistics.md)
 - [008 — Board-aware encoder / spatial inductive bias](008-board-aware-encoder.md)
 - [012 — Enable the reserved trade heads](012-trade-heads.md)
+- [019 — Human Catan game data as a training source](019-human-catan-game-data.md)
+- [020 — Modular agent: separate trade module over a strategy policy](020-modular-trade-agent.md)
