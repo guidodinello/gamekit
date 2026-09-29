@@ -1,7 +1,7 @@
 # 001 — Self-play opponent mix vs a fixed baseline
 
 **Status:** running
-**Last touched:** 2026-09-21
+**Last touched:** 2026-09-29
 
 ## Hypothesis
 
@@ -111,7 +111,12 @@ gate for catan, and the truco evidence that originally motivated the
 counter-evidence section above turned out to be measuring a different bug.
 Status stays `running` pending a catan attempt that isolates mix ratio with
 a clean, contamination-free pool at a higher value or longer budget (see
-[009](009-longer-runs-and-resume.md)).
+[009](009-longer-runs-and-resume.md)). The longer-budget half has since been
+run: catan log
+[006](https://github.com/guidodinello/catan/blob/main/docs/experiments/006-longer-run.md)
+ran 10M more steps and plateaued at about 20-21% vs `HeuristicAgent`, but it
+held `--baseline-mix` at 0.5, so it does not isolate the mix ratio and is not
+the clean-pool attempt this note is waiting for.
 
 ## Related notes
 

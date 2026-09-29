@@ -1,7 +1,7 @@
 # 009 — Longer runs / resume when the curve has not bent
 
-**Status:** planned
-**Last touched:** 2026-09-27
+**Status:** tested (inconclusive)
+**Last touched:** 2026-09-29
 
 ## Hypothesis
 
@@ -64,7 +64,20 @@ run. It also changed what the question is.
   is a small number of **fixed, pre-chosen** checkpoints, each
   benchmarked at n=4000. Picking the best in-loop checkpoint and then
   benchmarking it has a winner's-curse bias, and log 004 shows it: its
-  20.0% in-loop peak benchmarked at 16.2% [15.09%, 17.37%].
+  20.0% in-loop peak benchmarked at 16.2% [15.09%, 17.37%]. Catan log
+  [006](https://github.com/guidodinello/catan/blob/main/docs/experiments/006-longer-run.md)
+  is a second data point: its 27.5% in-loop reading (n=200, the maximum
+  over 40 evals) benchmarked at 19.90% [18.69%, 21.17%] at n=4000, a
+  7.6-point gap against 004's 3.8 (maximum over 12 evals). Log 006's
+  own explanation is that the maximum was taken over more evals.
+  **Hypothesis (unverified):** a second, contributing mechanism is that
+  catan's in-loop eval passes the same `seed=cfg.seed + 977` at every
+  checkpoint, so all in-loop evals replay the same 200 games and picking
+  the in-loop best may overfit that fixed sample — catan issue
+  [#25](https://github.com/guidodinello/catan/issues/25) verifies the
+  fixed seed (`rl/train.py:380`) but not that it explains any of the gap.
+  See also [005](005-eval-statistics.md) — no external source; observed in
+  catan log 006 and issue #25.
 - **Two gaps in catan's `--resume` path that a multi-leg run hits**
   (catan `rl/train.py` at the time of writing):
   1. `RegressionGuard` starts from `best_rate=-1.0` on every invocation.
@@ -79,19 +92,31 @@ run. It also changed what the question is.
      [010](010-entropy-schedule.md), which needs to change `ent_coef` on
      a resumed run.
 
+  Both gaps are closed in catan
+  [PR #24](https://github.com/guidodinello/catan/pull/24). Note that a
+  mismatched explicit `--ent-coef`/`--learning-rate` on `--resume` is now
+  a `RuntimeError`, so 010 still cannot change `ent_coef` on a resumed
+  run through the CLI.
+
 ## How to test
 
-**Prerequisites (catan, small):**
+**Prerequisites (catan, small) — both done in catan
+[PR #24](https://github.com/guidodinello/catan/pull/24):**
 
-- Add `--resume-rate` / `--resume-best` (or generalize `--bc-init-rate`
-  to both warm-start paths), so the resumed leg's `RegressionGuard` is
-  seeded with the previous leg's n=4000 rate and checkpoint rather than
-  `-1.0`.
-- Log the effective `ent_coef`/`learning_rate` after `MaskablePPO.load`
-  on the resume path, and fail if `--ent-coef`/`--learning-rate` were
-  passed explicitly with values that differ from the pickled ones. That
-  way a resume can't silently run different hyperparameters than the
-  command line says.
+- ✅ **Done.** Add `--resume-rate` / `--resume-best` (or generalize
+  `--bc-init-rate` to both warm-start paths), so the resumed leg's
+  `RegressionGuard` is seeded with the previous leg's n=4000 rate and
+  checkpoint rather than `-1.0`. Landed as `--init-rate` (alias
+  `--bc-init-rate`) and `--init-best`, which seed the guard on `--resume`
+  as well as `--bc-init`.
+- ✅ **Done.** Log the effective `ent_coef`/`learning_rate` after
+  `MaskablePPO.load` on the resume path, and fail if
+  `--ent-coef`/`--learning-rate` were passed explicitly with values that
+  differ from the pickled ones. That way a resume can't silently run
+  different hyperparameters than the command line says. Landed with the
+  effective values logged and a `RuntimeError` on explicit mismatch;
+  the same PR also made every checkpoint save refuse to overwrite an
+  existing file.
 
 **Protocol (catan, current best config):**
 
@@ -139,7 +164,66 @@ at ~84%" is real or an artifact of n=50, with no new training.
 
 ## Result
 
-Not yet attempted for the gate-vs-heuristic setup this note is about.
+**Verdict: inconclusive under the pre-registered rule; real gain, then
+plateau.**
+
+**Tested by:** catan log
+[006](https://github.com/guidodinello/catan/blob/main/docs/experiments/006-longer-run.md)
+(catan [PR #24](https://github.com/guidodinello/catan/pull/24)).
+
+**Deviations from this note's protocol**, as recorded by the log: it
+started from the 2M checkpoint (real `num_timesteps` 2,031,616), not
+`_final`/3M, so the gate baseline is 2M's 16.2% — which this note called
+secondary because of the winner's curse; the log's justification is that
+16.2% came from separate n=4000 benchmark games, so it is free of that
+bias relative to the later points. Fixed points were +2M…+10M (up to 10M
+additional steps, not 3M). `--envs 16 --n-steps 256` instead of 8 × 512
+(same 4096-step rollout). A new label (`catan_bc_ft_long`) with a pool
+seeded from that one checkpoint. `--device cuda` for the PPO update.
+
+n=4000 vs 3 `HeuristicAgent`, seat-rotated, same protocol as log 004;
+p-values are `gamekit.mc.testing.two_proportion_test` against the start,
+BH = `benjamini_hochberg` at q=0.05 over the five comparisons:
+
+| Point | Wins/n | Win rate | Wilson CI | vs start | p | BH |
+|---|---|---|---|---|---|---|
+| start (004's 2M) | 648/4000 | 16.20% | [15.09%, 17.37%] | -- | -- | -- |
+| +2M | 680/4000 | 17.00% | [15.87%, 18.20%] | +0.80 pt | 0.336 | no |
+| +4M | 761/4000 | 19.03% | [17.84%, 20.27%] | +2.82 pt | 9.1e-4 | yes |
+| +6M | 824/4000 | 20.60% | [19.38%, 21.88%] | +4.40 pt | 3.8e-7 | yes |
+| +8M | 829/4000 | 20.72% | [19.50%, 22.01%] | +4.52 pt | 1.8e-7 | yes |
+| +10M (gate) | 796/4000 | 19.90% | [18.69%, 21.17%] | +3.70 pt | 1.7e-5 | yes |
+
+- **Applying the rule as written:** the gate point (+10M) beats the start
+  with p=1.7e-5 and non-overlapping CIs, so the significance half of
+  *validated* is met. The "last three fixed points non-decreasing" half
+  fails (20.60% → 20.72% → 19.90%), so the rule returns *inconclusive*.
+- **Plateau reading (interpretation, not the verdict):** gains through
+  about +6M, then flat at about 20-21%. The last three points are pairwise
+  indistinguishable (+6M vs +8M p=0.89; +8M vs +10M p=0.36; +6M vs +10M
+  p=0.44), and the 0.82-point dip is under the 2.3-point MDE. Every point
+  from +4M on has a CI entirely above the start's, but the best upper
+  bound (22.01%) is well short of the 25% gate.
+- **Confounds:** one seed and one continuation, with no control leg
+  ("004 as-is for more steps"), so the gain can't be separated from
+  run-to-run variation; `--envs 16`/`--n-steps 256` vs 8 × 512; the pool
+  was seeded from a single checkpoint rather than 004's twelve.
+- **vs `RandomAgent`** (+8M checkpoint, n=4000): **94.6% [93.86%,
+  95.26%]** (3784/4000), against 004's 93.5% [92.69%, 94.22%]; the
+  intervals overlap slightly (93.86-94.22).
+- **Winner's curse:** the in-loop best (27.5%, n=200) benchmarked at
+  19.90% — see the second data point in the refinement above.
+- **Next step:** the rule prescribes another leg, not a new note; log 006
+  names [010](010-entropy-schedule.md) and [011](011-kl-guard.md) as the
+  natural follow-ups, since simply running longer flattened at about 20%.
+
+**Protocol lesson (a recommendation for future runs, not a retroactive
+change to 006's verdict):** the "last three fixed points non-decreasing"
+clause is fragile when the true curve is flat, because it lets point
+estimates that differ by less than the MDE decide the verdict. Phrase the
+trend condition as "no later fixed point is significantly below an earlier
+one" (e.g. pairwise `two_proportion_test` with BH) — no external source;
+observed in catan log 006.
 
 **Linked from** truco-py log
 [003](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/003-threshold-training-plateau.md)
@@ -163,8 +247,9 @@ whose BC-warm-start fine-tune oscillated in a 10.5-20.0% band vs
 ever triggering a stop — every dip stayed within its margin of the running
 best, so the run's own follow-up section names this note's question
 directly: "would more fine-tune steps past 3M keep climbing, given the run
-never regressed enough to stop?" Not tested — log 004 stopped at its
-pre-set step ceiling, not because the curve had bent.
+never regressed enough to stop?" Log 004 itself did not test it — it
+stopped at its pre-set step ceiling, not because the curve had bent; log
+006 above is the test.
 
 ## Related notes
 
