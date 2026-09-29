@@ -1,7 +1,7 @@
 # 005 — Eval statistics: Wilson intervals and eval-in-loop
 
 **Status:** validated
-**Last touched:** 2026-09-21
+**Last touched:** 2026-09-29
 
 ## Hypothesis
 
@@ -76,6 +76,48 @@ reporting for RL evals, and paid for it in undetected collapses (see
 [001](https://github.com/guidodinello/catan/blob/main/docs/experiments/001-ppo-vs-random.md)
 is the source of the 81.75% eval-in-loop gate result above.
 
+### In-loop eval design (2026-09-29, catan PR #27)
+
+catan issue [#25](https://github.com/guidodinello/catan/issues/25) found
+that `rl/train.py` passed the same `seed=cfg.seed + 977` at every in-loop
+eval, so all of them replayed the same 200 game setups. catan
+[PR #27](https://github.com/guidodinello/catan/pull/27) (merged as
+`95c59d8`, closes #25) fixed it by splitting the in-loop eval in two;
+the design and its caveats are written up in catan's
+[`docs/experiments/README.md`](https://github.com/guidodinello/catan/blob/main/docs/experiments/README.md#in-loop-eval-caveats).
+No external source; observed in catan PR #27.
+
+- **Fixed paired set drives only the stop.** The guard eval keeps
+  `cfg.seed + 977` (unchanged, so comparable with catan 004/006) and is
+  the only input to `RegressionGuard`'s stop decision. A fixed game set
+  makes the checkpoint-to-checkpoint comparison paired, which is what a
+  stop-on-regression rule wants.
+- **Fresh seed picks the best checkpoint.** A second n=200 eval at
+  `cfg.seed + 977 + step` (`step` is cumulative, so a `--resume` leg never
+  replays the previous leg's seeds) is the *reported* rate and alone
+  picks `best_checkpoint` / `best_win_rate`. Both rates are logged, as
+  `reported=` and `guard(fixed)=`.
+- **Why the guard stays fixed (upper bound).** The PR's planner simulated
+  the guard in pure Python with a flat 21% policy and independent n=200
+  draws (margin 0.10, patience 2, seeded at 16.2%): about 24% of 40-eval
+  runs and about 64% of 93-eval runs stop falsely. That is an *upper
+  bound* for the fixed set, because pairing is only partial: dice and
+  steals draw from the shared `state.rng`, so they drift once policies
+  differ, while board, dev deck, starting player, seat and opponent
+  seeds stay fixed. Re-running the simulation for this note (5,000 runs
+  per length) gave 25% and 64%, within simulation noise of those figures.
+- **Cost.** About 31 s per n=200 eval (catan log 006: 20.4 min over 40
+  evals against 185.7 min of training), so the second eval adds about
+  20 min to a 10M-step run (about 4% of an 8 h budget), or about 9% fewer
+  training steps on a run bound by a timeout.
+- **What it does not fix.** Catan experiments 001-006 used the fixed seed
+  for everything, including best-checkpoint selection. The new scheme
+  removes the replay of one sample, but the best reported rate is still
+  a maximum over about 40 noisy n=200 evals, so it stays biased upward.
+  **n=4000 confirmation of the chosen checkpoint remains mandatory.**
+  See [009](009-longer-runs-and-resume.md) for how this bears on the
+  winner's-curse gap.
+
 **Linked from** three truco-py logs, none of which confirm this note —
 each is recorded here for the numbers, by its own stated verdict, not as
 independent tests of the hypothesis:
@@ -97,9 +139,17 @@ independent tests of the hypothesis:
   incidentally, the first post-rotation RL benchmark with a computed
   Wilson interval, 79.0% [72.8%, 84.1%] vs `ThresholdAgent`, n=200).
 
+Catan log
+[007](https://github.com/guidodinello/catan/blob/main/docs/experiments/007-human-games.md)
+also cites this note, for the Wilson intervals on its 12-game arms. It
+does not test this note; the note it tests is
+[018](018-human-baseline-sanity-check.md).
+
 ## Related notes
 
 - [001 — Self-play opponent mix vs a fixed baseline](001-self-play-opponent-mix.md)
 - [006 — Uniform-over-atoms baseline is not `RandomAgent`](006-uniform-atoms-baseline.md)
+- [009 — Longer runs / resume when the curve has not bent](009-longer-runs-and-resume.md)
 - [011 — KL guard vs the previous snapshot](011-kl-guard.md)
 - [016 — Positional (mano) advantage must be rotated out of a benchmark arm](016-positional-advantage-rotation.md)
+- [018 — Human baseline as a sanity check for learned / hand-written agents](018-human-baseline-sanity-check.md)
