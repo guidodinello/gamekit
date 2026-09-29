@@ -51,6 +51,7 @@ sections are a floor, not a ceiling.
 | `idea` | Not yet planned — a hypothesis worth writing down. |
 | `planned` | The test is designed; no run has started. |
 | `running` | An experiment is in progress or has interim results. |
+| `tested` | The pre-registered run completed, but the verdict was neither validated nor rejected. Add a qualifier in parentheses, e.g. `tested (inconclusive)`. |
 | `validated` | The experiment confirmed the hypothesis. |
 | `rejected` | The experiment contradicted the hypothesis. |
 
@@ -58,7 +59,7 @@ sections are a floor, not a ceiling.
 
 | id | title | status | last touched |
 |---|---|---|---|
-| [001](001-self-play-opponent-mix.md) | Self-play opponent mix vs a fixed baseline | running | 2026-09-21 |
+| [001](001-self-play-opponent-mix.md) | Self-play opponent mix vs a fixed baseline | running | 2026-09-29 |
 | [002](002-bc-warm-start.md) | Behavior-cloning warm start before PPO | running | 2026-09-23 |
 | [003](003-discount-horizon.md) | Discount horizon vs episode length | validated | 2026-09-20 |
 | [004](004-factored-action-head.md) | Factored action head via sequential atom composition | validated | 2026-09-21 |
@@ -66,7 +67,7 @@ sections are a floor, not a ceiling.
 | [006](006-uniform-atoms-baseline.md) | Uniform-over-atoms baseline is not `RandomAgent` | validated | 2026-09-20 |
 | [007](007-inference-thread-oversubscription.md) | Inference-worker thread oversubscription | validated | 2026-09-21 |
 | [008](008-board-aware-encoder.md) | Board-aware encoder / spatial inductive bias | idea | 2026-09-23 |
-| [009](009-longer-runs-and-resume.md) | Longer runs / resume when the curve has not bent | planned | 2026-09-27 |
+| [009](009-longer-runs-and-resume.md) | Longer runs / resume when the curve has not bent | tested (inconclusive) | 2026-09-29 |
 | [010](010-entropy-schedule.md) | Entropy schedule instead of a fixed coefficient | planned | 2026-09-27 |
 | [011](011-kl-guard.md) | KL guard vs the previous snapshot | planned | 2026-09-27 |
 | [012](012-trade-heads.md) | Enable the reserved trade heads | idea | 2026-09-20 |
