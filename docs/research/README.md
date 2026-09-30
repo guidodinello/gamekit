@@ -63,7 +63,7 @@ sections are a floor, not a ceiling.
 | [002](002-bc-warm-start.md) | Behavior-cloning warm start before PPO | running | 2026-09-23 |
 | [003](003-discount-horizon.md) | Discount horizon vs episode length | validated | 2026-09-20 |
 | [004](004-factored-action-head.md) | Factored action head via sequential atom composition | validated | 2026-09-21 |
-| [005](005-eval-statistics.md) | Eval statistics: Wilson intervals and eval-in-loop | validated | 2026-09-29 |
+| [005](005-eval-statistics.md) | Eval statistics: Wilson intervals and eval-in-loop | validated | 2026-09-30 |
 | [006](006-uniform-atoms-baseline.md) | Uniform-over-atoms baseline is not `RandomAgent` | validated | 2026-09-20 |
 | [007](007-inference-thread-oversubscription.md) | Inference-worker thread oversubscription | validated | 2026-09-21 |
 | [008](008-board-aware-encoder.md) | Board-aware encoder / spatial inductive bias | idea | 2026-09-23 |
@@ -78,5 +78,5 @@ sections are a floor, not a ceiling.
 | [017](017-amdahl-ceiling-and-real-batch-size.md) | Measure the Amdahl ceiling and the real batch size before building an inference server | validated | 2026-09-23 |
 | [018](018-human-baseline-sanity-check.md) | Human baseline as a sanity check for learned / hand-written agents | planned | 2026-09-29 |
 | [019](019-human-catan-game-data.md) | Human Catan game data as a training source | idea | 2026-09-29 |
-| [020](020-modular-trade-agent.md) | Modular agent: separate trade module over a strategy policy | idea | 2026-09-29 |
-| [021](021-decision-time-search.md) | Decision-time search for Catan: ISMCTS with the trained policy/value network as priors | idea | 2026-09-29 |
+| [020](020-modular-trade-agent.md) | Modular agent: separate trade module over a strategy policy | idea | 2026-09-30 |
+| [021](021-decision-time-search.md) | Decision-time search for Catan: ISMCTS with the trained policy/value network as priors | idea | 2026-09-30 |
