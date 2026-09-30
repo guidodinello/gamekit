@@ -118,3 +118,4 @@ trading.
 - [018 — Human baseline as a sanity check for learned / hand-written agents](018-human-baseline-sanity-check.md)
 - [019 — Human Catan game data as a training source](019-human-catan-game-data.md)
 - [020 — Modular agent: separate trade module over a strategy policy](020-modular-trade-agent.md)
+- [021 — Decision-time search for Catan: ISMCTS with the trained policy/value network as priors](021-decision-time-search.md)
