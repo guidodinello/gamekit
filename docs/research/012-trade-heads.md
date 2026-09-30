@@ -102,9 +102,35 @@ the direction we intend to implement, not just a candidate.
 
 ## Result
 
-Not yet attempted — the propose/counter heads remain masked off as of
-catan PR #29, and no trading opponent exists in training. Tracked by
-catan [#28](https://github.com/guidodinello/catan/issues/28).
+Not yet attempted — the propose/counter heads remain masked off, and no
+trading opponent exists in training (one now exists for benchmarking, see
+below). Tracked by catan
+[#28](https://github.com/guidodinello/catan/issues/28).
+
+**Tested by / Linked from:** catan log
+[008](https://github.com/guidodinello/catan/blob/main/docs/experiments/008-trading-opponents-baseline.md)
+(catan [PR #36](https://github.com/guidodinello/catan/pull/36)) —
+prerequisite only: trading opponents + trade-aware benchmark + baseline;
+no trade learning. Numbers as in the log (n=4000 per arm, seat-rotated,
+Wilson 95%):
+
+- 2 `TradingHeuristic` + 2 `Heuristic`: the trading seats won 53.4%
+  [51.85%, 54.94%] of games — trading helps a heuristic (small effect).
+- 1 `Heuristic` vs 3 `TradingHeuristic`: the heuristic won 21.5%
+  [20.28%, 22.83%].
+- **Baseline for every trade stage:** `rl` (trade responses forced to
+  reject) vs 3 `TradingHeuristic`: **18.9% [17.72%, 20.14%]**, 1.73
+  completed trades per game. The end-to-end path has to beat this with a
+  non-overlapping interval.
+- Caveat: the opponent's acceptance rate is only 4-7% of proposals; it is
+  a minimal rule, not a model of human trading.
+
+**Finding — the RL checkpoint always plays `PlayVictoryPoint`.** In log 008
+arm C the RL seat plays it at every legal opportunity (3854 of 3854
+legal decisions), cloned from `HeuristicAgent` (catan
+[#34](https://github.com/guidodinello/catan/issues/34)). Relevant to the
+next action-space change, since that atom is a candidate to mask
+alongside enabling the trade heads.
 
 **Linked from** catan log
 [007](https://github.com/guidodinello/catan/blob/main/docs/experiments/007-human-games.md),
