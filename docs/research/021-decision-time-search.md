@@ -1,7 +1,7 @@
 # 021 — Decision-time search for Catan: ISMCTS with the trained policy/value network as priors
 
 **Status:** idea
-**Last touched:** 2026-09-29
+**Last touched:** 2026-09-30
 
 ## Hypothesis
 
@@ -134,7 +134,10 @@ assumes none of these.
   consistently with public information (Dobre-style independent tracking is
   the simplest belief model); dice outcomes are sampled.
 - Leaves are scored by the critic, one value per seat, backed up per seat
-  (multi-player UCT); no rollouts to game end.
+  (multi-player UCT); no rollouts to game end. **Score leaves with
+  V+ = V + own public VP / 10, not raw V** (catan log
+  [009](https://github.com/guidodinello/catan/blob/main/docs/experiments/009-critic-calibration.md): raw V carries a negative own-VP term and is negatively
+  rank-correlated with own VP; see Result).
 - Trades stay masked, as today ([012](012-trade-heads.md),
   [020](020-modular-trade-agent.md)).
 
@@ -179,7 +182,11 @@ assumes none of these.
 - **The critic** was trained on on-policy states under a shaped reward
   (potential-based VP, gamma 0.999), so it is neither calibrated as a win
   probability nor reliable off-distribution, and search deliberately visits
-  off-policy states. Check its calibration on searched states first.
+  off-policy states. Measured once, on decision states, in catan log
+  [009](https://github.com/guidodinello/catan/blob/main/docs/experiments/009-critic-calibration.md): V+ ranks well (AUC about 0.83) but weakly early in
+  the game (about 0.69), it is not a probability, and sibling differences
+  are small (see Result). Still check it on *searched* states, which log
+  009 did not cover.
 - **Four players, non-zero-sum.** Modeling opponents with our own policy
   may be a poor fit for `HeuristicAgent`.
 - **The prior may already be near-greedy.** Search adds little if the
@@ -206,7 +213,45 @@ duplicated here.
 
 ## Result
 
-Not yet attempted.
+Search not yet attempted; tracked by catan issue
+[#41](https://github.com/guidodinello/catan/issues/41).
+
+**Prerequisite measured (the critic as a leaf evaluator):** catan log
+[009](https://github.com/guidodinello/catan/blob/main/docs/experiments/009-critic-calibration.md) (catan [PR #43](https://github.com/guidodinello/catan/pull/43); n=4000 seat-rotated games per arm,
+checkpoint `catan_bc_ft_long_10031616`). It tests the evaluator, not
+search. No external source; observed in the log.
+
+- **Evaluate leaves on V+ = V + own public VP / 10, not raw V.** The
+  shaping telescopes, so V is roughly `E[gamma^N * (+-1)] - phi(s)` with
+  `phi` = public VP / 10: raw V carries a negative own-VP term (rank
+  correlation with own VP -0.15 to -0.18). AUC vs win, one random decision
+  per game: V+ 0.832 [0.816, 0.847] (vs 3 `Heuristic`) and 0.830 [0.814,
+  0.845] (vs 3 `TradingHeuristic`); raw V 0.768 and 0.760; public VP lead
+  alone 0.777 and 0.774.
+- **V+ is not a probability.** It is monotone in the win rate (about 1% to
+  63% across deciles), and (V+ + 1) / 2 tracks that rate within about
+  0.11, but is systematically off (inside the Wilson interval in 7 of 10
+  deciles vs `Heuristic`, 4 of 10 vs `TradingHeuristic`). Use it to
+  rank, and do not back up a "win probability" from it.
+- **Weak early, good late.** AUC of V+ by the seat's own turn: about
+  0.69-0.70 in the first 12 turns, 0.82-0.83 for turns 12-23, 0.86 from
+  turn 24. Within a fixed public state (own VP x lead) it is only about
+  0.67; it adds about +0.04 AUC over a logistic model of lead, own VP and
+  turn. So a shallow search from early states is leaning on the weakest
+  part of the critic.
+- **Sibling differences are small:** dV between sibling states (accept vs
+  offer withdrawn, 56,408 offers) has 5th-95th percentile about -0.009 to
+  +0.013, against V+ decile means that span about -1 to +0.2. Exploration constants
+  and any "prefer the higher child" margins must be set on that scale.
+- **Evidence on unseen states is partial.** The probe states (opponent's
+  turn, after a simulated trade) were never learner decision points, yet V
+  behaved sensibly there (receiving cards raised V in 92% of offers,
+  paying without receiving in 8%). V read at the raw pending-offer state,
+  with its never-seen offer features, shifted about 3x more than dV. V was
+  read only from the `rl` seat's own view: the per-seat leaf values
+  multi-player UCT needs (other seats' views) were not measured.
+- Caveat: one checkpoint, decision states only, none of it on states
+  produced by a search.
 
 **Motivated by:** Guido's question of why neither game searches at decision
 time, and the correction that Stockfish is alpha-beta + NNUE rather than

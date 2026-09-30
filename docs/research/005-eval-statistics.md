@@ -1,7 +1,7 @@
 # 005 — Eval statistics: Wilson intervals and eval-in-loop
 
 **Status:** validated
-**Last touched:** 2026-09-29
+**Last touched:** 2026-09-30
 
 ## Hypothesis
 
@@ -145,6 +145,39 @@ also cites this note, for the Wilson intervals on its 12-game arms. It
 does not test this note; the note it tests is
 [018](018-human-baseline-sanity-check.md).
 
+### Paired fork statistic (2026-09-30, catan log 009 / PR #43)
+
+When the question is what *one decision* does to the win rate, two
+independent n=4000 arms are the wrong tool. catan log
+[009](https://github.com/guidodinello/catan/blob/main/docs/experiments/009-critic-calibration.md) (catan [PR #43](https://github.com/guidodinello/catan/pull/43)) measured it with a paired fork, and this
+records the statistic so other logs can reuse it. No external source;
+observed in that log.
+
+- **Design.** At a sampled decision point (one per game, so the units are
+  independent), copy the state and the agents, then play the game on from
+  both branches (accept vs reject). Repeat for K pairs (K=16). Both
+  branches of pair k are reseeded with the same RNG seed (common random
+  numbers), so dice, draws and steals start identical and differ only
+  through the decision. The per-decision effect is
+  `dwin = mean over k of (win_accept - win_reject)`.
+- **Inference.** The unit is the decision (game), not the playout. Report
+  the mean of `dwin`, or a rank correlation of `dwin` with a predictor,
+  with a **percentile bootstrap of the paired differences** (log 009: B =
+  2000 over 3856 decisions). Do **not** use `gamekit.mc.two_proportion_test`
+  on the two branches' win counts: the branches share their random numbers
+  and starting state, so they are not independent samples, which is
+  also what the benchmark log's "seats of one role are dependent" caveat
+  warns about. The gate here is the CI of the *difference* excluding 0,
+  not non-overlapping arm intervals.
+- **Scale.** In log 009 the per-decision `dwin` has SD 0.103 at K=16; the
+  mean over 3856 decisions has SE about 0.0017, so the design resolves
+  differences of roughly 0.3-0.6 points and no smaller.
+- **Caveats.** Common random numbers keep the branches coupled only until
+  their decisions consume the RNG differently, so the variance saved was
+  not measured against independent seeds. A "reject" branch that lets
+  later responders act is not the same as withdrawing the offer; say
+  which one the fork uses.
+
 ## Related notes
 
 - [001 — Self-play opponent mix vs a fixed baseline](001-self-play-opponent-mix.md)
@@ -153,3 +186,4 @@ does not test this note; the note it tests is
 - [011 — KL guard vs the previous snapshot](011-kl-guard.md)
 - [016 — Positional (mano) advantage must be rotated out of a benchmark arm](016-positional-advantage-rotation.md)
 - [018 — Human baseline as a sanity check for learned / hand-written agents](018-human-baseline-sanity-check.md)
+- [020 — Modular agent: separate trade module over a strategy policy](020-modular-trade-agent.md)

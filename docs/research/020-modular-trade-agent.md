@@ -1,7 +1,7 @@
 # 020 — Modular agent: separate trade module over a strategy policy
 
 **Status:** idea
-**Last touched:** 2026-09-29
+**Last touched:** 2026-09-30
 
 ## Hypothesis
 
@@ -48,7 +48,8 @@ actually trade.
 
 **Caveat for stage 1:** V comes from a critic trained on games without
 trades, so it may be miscalibrated on post-trade states it has never seen.
-Check calibration before trusting the margin.
+Check calibration before trusting the margin. (Done: catan log
+[009](https://github.com/guidodinello/catan/blob/main/docs/experiments/009-critic-calibration.md), see Result.)
 
 **Relation to the end-to-end path:** the stages are stepping stones and
 baselines for 012's end-to-end joint training, not a replacement for it.
@@ -94,6 +95,38 @@ Wilson 95%):
   beat, with a non-overlapping interval.
 - Caveat: the opponent's acceptance rate is only 4-7% of proposals; it is
   a minimal rule, not a model of human trading.
+
+**Stage-1 prerequisite measured:** catan log [009](https://github.com/guidodinello/catan/blob/main/docs/experiments/009-critic-calibration.md) (catan
+[PR #43](https://github.com/guidodinello/catan/pull/43), closes catan #37; n=4000 seat-rotated games per arm,
+checkpoint `catan_bc_ft_long_10031616`). It checks the critic that stage 1
+would use; it does not run stage 1. No external source; observed in the log.
+
+- **V+ ranks positions.** Raw V is *negatively* correlated with own public
+  VP (shaped reward, `phi(terminal) = 0`: V is roughly
+  `E[gamma^N * (+-1)] - phi(s)`), so the usable score is
+  **V+ = V + own public VP / 10**. Headline AUC of V+ vs win: 0.832
+  [0.816, 0.847] vs 3 `Heuristic`, 0.830 [0.814, 0.845] vs 3
+  `TradingHeuristic` (public VP lead alone: 0.77-0.78). It is a ranking
+  score, not a probability.
+- **dV ranks accepts only weakly.** At 56,408 offers to the `rl` seat
+  (vs 3 `TradingHeuristic`), dV = V(after accepting) - V(offer withdrawn)
+  is tiny (5th-95th percentile about -0.009 to +0.013; 51% positive).
+  In paired playouts (3856 offers x 16 pairs, common random numbers),
+  Spearman(dV, win-rate change from accepting) = +0.041 [+0.002, +0.077],
+  and the change for dV > 0 minus dV <= 0 is +0.6 points [-0.03, +1.3],
+  which includes 0.
+- **Accepting the average offer is neutral:** -0.09 points on the win rate.
+  The per-offer gain of "accept iff dV > margin" over always-reject is
+  about +0.1 point, with every 95% CI including 0 (post-hoc bootstrap in
+  the log).
+- **Pre-registered go/no-go for stage 1 (`go_for_38`): False.** catan
+  [#38](https://github.com/guidodinello/catan/issues/38) (the
+  `rl_value_trade` agent, stage 1) is **deferred by owner decision on
+  2026-09-30**, kept open and parked. If it is picked up: a small
+  non-negative margin on raw dV (scale about 0.01), tuned on catan seeds
+  3000001+ that the log reserves.
+- Caveat: one critic checkpoint, one minimal trading opponent (4-7% of
+  proposals accepted), and V read only from the `rl` seat's own view.
 
 **Motivated by:** Guido's hypothesis while planning catan #28, and the
 degenerate routing in catan log 007.
