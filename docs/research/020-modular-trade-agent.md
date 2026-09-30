@@ -59,11 +59,14 @@ Stage 1 in particular is the baseline end-to-end training has to beat.
 - **Prerequisite shared with #28:** a benchmark against opponents that
   actually trade (a trading heuristic variant and/or self-play with the
   heads unmasked), reporting trade frequency and acceptance stats. Without
-  it, no stage can be measured.
+  it, no stage can be measured. The trading-heuristic variant and its
+  benchmark now exist (catan log
+  [008](https://github.com/guidodinello/catan/blob/main/docs/experiments/008-trading-opponents-baseline.md)).
 - **Metric:** win rate with Wilson intervals
   ([005](005-eval-statistics.md)) in 4-player games against trading
   opponents; per stage, versus the previous stage. Stage 1 versus forced
-  reject (`trade_policy: "reject_all"`).
+  reject (`trade_policy: "reject_all"`): 18.9% [17.72%, 20.14%] vs 3
+  `TradingHeuristic` (log 008).
 - **Gate:** each stage must beat the previous one with non-overlapping
   intervals to justify the added complexity.
 - **Cost estimate:** stage 1 is inference-only with the existing
@@ -73,6 +76,24 @@ Stage 1 in particular is the baseline end-to-end training has to beat.
 
 Not yet attempted. Tracked by catan issue
 [#28](https://github.com/guidodinello/catan/issues/28).
+
+**Tested by / Linked from:** catan log
+[008](https://github.com/guidodinello/catan/blob/main/docs/experiments/008-trading-opponents-baseline.md)
+(catan [PR #36](https://github.com/guidodinello/catan/pull/36)) —
+prerequisite only: trading opponents + trade-aware benchmark + baseline;
+no trade learning. Numbers as in the log (n=4000 per arm, seat-rotated,
+Wilson 95%):
+
+- 2 `TradingHeuristic` + 2 `Heuristic`: the trading seats won 53.4%
+  [51.85%, 54.94%] of games — trading helps a heuristic (small effect).
+- 1 `Heuristic` vs 3 `TradingHeuristic`: the heuristic won 21.5%
+  [20.28%, 22.83%].
+- **Baseline for every trade stage:** `rl` (forced reject) vs 3
+  `TradingHeuristic`: **18.9% [17.72%, 20.14%]**, 1.73 completed trades
+  per game. Stage 1 (value-priced responses) now has a concrete bar to
+  beat, with a non-overlapping interval.
+- Caveat: the opponent's acceptance rate is only 4-7% of proposals; it is
+  a minimal rule, not a model of human trading.
 
 **Motivated by:** Guido's hypothesis while planning catan #28, and the
 degenerate routing in catan log 007.
