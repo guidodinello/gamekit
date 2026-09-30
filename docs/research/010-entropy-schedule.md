@@ -1,7 +1,7 @@
 # 010 — Entropy schedule instead of a fixed coefficient
 
-**Status:** planned
-**Last touched:** 2026-09-27
+**Status:** tested — 010b rejected for catan at 3M (one seed); 010a still untested
+**Last touched:** 2026-09-30
 
 ## Hypothesis
 
@@ -79,7 +79,7 @@ with different evidence. Split them:
   the float `self.ent_coef` inside each `train()` call. A
   `BaseCallback._on_rollout_start` that sets
   `self.model.ent_coef = schedule(self.model.num_timesteps)` updates it
-  once per rollout (8,192 steps at catan's `n_steps=512 × 16 envs`),
+  once per rollout (4,096 steps at catan's 004/010 fine-tune config, `n_steps=512 × 8 envs`; 8,192 only at 16 envs),
   with no chunk-boundary artifacts. Record the value it set (e.g.
   `train/ent_coef_effective`) so the effective schedule shows up in
   TensorBoard, not just the CLI.
@@ -158,8 +158,57 @@ the constant shorthand.
 
 ## Result
 
-Not yet attempted. catan has since gained a constant `--ent-coef`
-flag, but neither consumer repo has a schedule (see Refinement).
+**010b — verdict: rejected for catan's BC fine-tune at 3M steps (one seed).**
+Neither schedule beat the constant 0.01 at the pre-registered gate (higher
+rate and `two_proportion_test` p < 0.025, Bonferroni for two arms).
+
+**Tested by:** catan log
+[010](https://github.com/guidodinello/catan/blob/main/docs/experiments/010-entropy-schedule.md)
+(catan [PR #44](https://github.com/guidodinello/catan/pull/44), closing
+issue #40). n=4000 vs 3 `HeuristicAgent`, seat-rotated, at each arm's fixed
+3M checkpoint, same BC clone and seed, PPO update on CUDA:
+
+| Arm | Win rate | Wilson CI | vs control | p |
+|---|---|---|---|---|
+| control, constant 0.01 | 16.30% | [15.19%, 17.48%] | -- | -- |
+| warm-start ramp 0.005 → 0.02 over 1M | 17.35% | [16.21%, 18.55%] | +1.05 pt | 0.209 |
+| cold-start decay 0.02 → 0.005 over 3M | 17.38% | [16.23%, 18.58%] | +1.07 pt | 0.199 |
+| *reference: 004's own 3M checkpoint* | 14.10% | [13.06%, 15.21%] | −2.20 pt | 0.006 |
+
+Both arm differences are under the ~2.3-point minimum detectable difference,
+so the honest reading is "no detectable effect at this resolution", not "a
+schedule hurts". No arm collapsed: `entropy_loss` stayed between about −0.15
+and −0.20 throughout, and the schedules moved it in the expected direction
+(the ramp arm held roughly 0.03 more entropy than control from ~2M on).
+
+**Corrections to this note, found by running it:**
+
+- **"Control = 004 itself" did not hold.** The Protocol allowed
+  re-benchmarking 004's 3M checkpoint as the control. The log ran a fresh
+  control instead (004 trained on CPU, the code changed since, and no 004
+  tfevents survive for the `entropy_loss` trace), and 004's own 3M
+  checkpoint benchmarked **2.2 points below** the same-config rerun
+  (14.10% vs 16.30%, p = 0.006). That run-to-run spread is about as large
+  as any schedule effect this design could resolve.
+- **Rollout cadence is 4,096, not 8,192,** for catan's 004/010 config
+  (8 envs × `n_steps` 512); the callback fires every 4,096 steps.
+- **`train/ent_coef_effective` leads `train/entropy_loss` by one rollout** at
+  the same TensorBoard step (SB3 dumps the logs before the update that the
+  recorded coefficient feeds).
+- The schedule lives in catan (`rl/train.py`: `ent_coef_at`,
+  `parse_ent_schedule`, a rollout-start callback), not in `gamekit.rl`; the
+  "optional" shared implementation below was not needed to run 010b.
+
+**Limits:** one seed per arm, one control draw, CUDA non-determinism. The
+verdict is about this budget and this start; it says nothing about
+collapse prevention (010a, untested) or longer runs.
+
+**Cheap follow-up:** a second seed for the control and the better arm
+(ramp/decay were indistinguishable, p = 0.976), which would put a number on
+the run-to-run spread this single-seed design cannot resolve. Nothing here
+points at entropy as catan's bottleneck; catan log
+[004](https://github.com/guidodinello/catan/blob/main/docs/experiments/004-bc-warm-start.md)'s
+BC-fidelity finding remains the better lead.
 
 **Linked from** truco-py log
 [005](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/005-june-threshold-mix-collapse.md)

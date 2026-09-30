@@ -68,7 +68,7 @@ sections are a floor, not a ceiling.
 | [007](007-inference-thread-oversubscription.md) | Inference-worker thread oversubscription | validated | 2026-09-21 |
 | [008](008-board-aware-encoder.md) | Board-aware encoder / spatial inductive bias | idea | 2026-09-23 |
 | [009](009-longer-runs-and-resume.md) | Longer runs / resume when the curve has not bent | tested (inconclusive) | 2026-09-29 |
-| [010](010-entropy-schedule.md) | Entropy schedule instead of a fixed coefficient | planned | 2026-09-27 |
+| [010](010-entropy-schedule.md) | Entropy schedule instead of a fixed coefficient | tested (010b rejected, one seed) | 2026-09-30 |
 | [011](011-kl-guard.md) | KL guard vs the previous snapshot | planned | 2026-09-27 |
 | [012](012-trade-heads.md) | Enable the reserved trade heads | idea | 2026-09-29 |
 | [013](013-selfplay-pool-contamination.md) | Self-play pool contamination across runs | validated | 2026-09-21 |
