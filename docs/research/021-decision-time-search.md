@@ -1,7 +1,7 @@
 # 021 — Decision-time search for Catan: ISMCTS with the trained policy/value network as priors
 
-**Status:** idea
-**Last touched:** 2026-09-30
+**Status:** tested (search helps with a known opponent model, an upper bound; self-model confirmation pending)
+**Last touched:** 2026-10-02
 
 ## Hypothesis
 
@@ -213,8 +213,65 @@ duplicated here.
 
 ## Result
 
-Search not yet attempted; tracked by catan issue
-[#41](https://github.com/guidodinello/catan/issues/41).
+**Search measured:** catan log
+[011](https://github.com/guidodinello/catan/blob/main/docs/experiments/011-decision-time-search.md)
+(catan [PR #45](https://github.com/guidodinello/catan/pull/45), merged as
+`72cb62e`; issue [#41](https://github.com/guidodinello/catan/issues/41)).
+Same checkpoint `catan_bc_ft_long_10031616`, vs 3 `HeuristicAgent`,
+seat-rotated, on 006's boards (seeds 1..n), no retraining. No external
+source; observed in the log.
+
+- **A1, search with a known opponent model (`heur`, S=128 simulations per
+  searched decision): 34.62% [33.17, 36.11] vs A0 (no search) 20.72%
+  [19.50, 22.01], n=4000 each, +13.9 pts** (z=13.89; exact McNemar: 770
+  boards won only with search, 214 only without). A0 reproduced 006's
+  829/4000 exactly. **This is an upper bound**: the opponents inside the
+  search are the same deterministic `HeuristicAgent` that sits at the
+  table, so search predicts their moves exactly and is uncertain only
+  about hidden cards and dice. It does not transfer to other opponents.
+- **A2, the transferable number (`self`, opponents inside the search =
+  the agent's own greedy policy, S=64): 27.2% [24.53, 30.04], n=1000,
+  +5.6 pts** over 21.6% without search on the same boards (p=0.0036).
+  Exploratory (about 5 pts MDE at n=1000, half the A1 budget), and the
+  interval's lower bound is below 25%.
+- **Budget curve** (`heur`, same 1000 boards, S=0/32/64/128): 21.6% ->
+  26.3% -> 29.8% -> 35.3%, monotone with no sign of saturation. Post-hoc,
+  `heur` S=64 vs `self` S=64 is -2.6 pts for not knowing the opponents
+  (p=0.20), which n=1000 cannot resolve.
+- **Latency** (per searched decision, 16 concurrent workers on a loaded
+  laptop): S=128 `heur` mean 845 ms, p95 1.5 s; S=64 `self` mean 1.8 s,
+  p95 3.8 s, max 45 s. 53% of top-level decisions have one legal action
+  and are not searched. Fine for an offline benchmark, slow for
+  interactive play, so it is a benchmark role only.
+- **The prior is not near-greedy.** Search overrides the greedy action in
+  9.3% of searched decisions (MAIN 13.1%, first settlement 12.4%); about
+  one searched decision in eleven carries the +13.9 pts. Also, an
+  `EndTurn` leaf's per-sample noise is about 3.5x the spread between
+  sibling moves, so a larger budget mostly buys noise reduction.
+- **Design departures from the sketch above** (log 011): (1) the backup is
+  single-seat with a fixed opponent model, not per-seat multi-player UCT,
+  because opponents are simulated rather than searched, so per-seat leaf
+  values were never needed; (2) the tree is open-loop over the rl seat's
+  own top-level decisions (opponent moves are simulated, not tree nodes);
+  (3) Q is min-max normalized over the tree (MuZero's `MinMaxStats`) with
+  V+ leaves and +-1 terminals, and an unvisited child takes the parent's
+  mean normalized Q. Trades stay masked, as sketched.
+- **Phase 5 gate:** A1's Wilson lower bound (33.17%) is above 25%, so the
+  pre-registered rule is met **only with the known-opponent-model
+  qualifier**. Whether that counts toward closing the gate is Guido's
+  call and is still undecided. The model-free 20.72% is unchanged.
+- **Next:** catan issue
+  [#46](https://github.com/guidodinello/catan/issues/46) is the planned
+  confirmation: `self` opponent model, S=128, n=4000 on fresh boards, to be
+  pre-registered in a new log before any measured run (none exists yet). Its
+  gate is the self arm's Wilson lower bound above 25% **and** a significant
+  win over no search, which would be the model-free route to the Phase 5
+  gate that A1 cannot settle.
+- Caveats: one checkpoint; the determinizer is weaker than card counting
+  (it ignores what a steal revealed).
+- If a second game wants it, the torch-free search core
+  (`agents/ismcts.py` in catan) could move into gamekit; truco does not,
+  since this note recommends CFR there.
 
 **Prerequisite measured (the critic as a leaf evaluator):** catan log
 [009](https://github.com/guidodinello/catan/blob/main/docs/experiments/009-critic-calibration.md) (catan [PR #43](https://github.com/guidodinello/catan/pull/43); n=4000 seat-rotated games per arm,
