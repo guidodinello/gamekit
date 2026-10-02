@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `gamekit.league`: a round-robin league with anchored ratings. `run_league`
+  plays every pairing of named agents through `gamekit.benchmark.run_arm`
+  (seat-rotated, `n` per pairing, seeds derived from `(seed, a, b)` so adding an
+  agent never reshuffles existing pairings) and writes one resumable result file
+  per pairing via `gamekit.results`; a re-run skips pairings whose stored config
+  hash matches and raises on a changed config. `summarize_league` fits a
+  Bradley-Terry MLE (stdlib-only Hunter MM iteration, no numpy; a weak prior keeps
+  perfect scores finite) on an Elo scale pinned to a named anchor, with stratified
+  bootstrap CIs, the pairwise win matrix with Wilson CIs and BT residuals, and a
+  report of 3-cycles among significant edges. Multi-seat games use a balanced
+  `(a, b, a, b, ...)` pairwise reduction; odd seat counts raise
+  `NotImplementedError`. Additive only; nothing existing changes. Research note
+  [022](docs/research/022-league-ratings.md) records the design and its evidence
+  (#38).
 - `docs/research/`: a git-tracked logbook of game-agnostic technique notes
   (hypothesis, citations, how to test, result), with a note template and an
   experiment-log template for consumer repos (#26, #27, #28).

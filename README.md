@@ -28,6 +28,9 @@ history.
 - `gamekit.benchmark` — a field-free benchmark-arm runner: mandatory seat
   rotation, win-rate summaries by role and by seat, a two-proportion
   comparison, and a CLI skeleton. Never names a game's own record type.
+- `gamekit.league` — a seat-rotated round-robin over named agents, resumable
+  per pairing, with an anchored Bradley-Terry/Elo fit (stdlib-only), bootstrap
+  CIs, the pairwise win matrix, and a cycle report. See research note 022.
 - `gamekit.rl` (`[rl]` extra) — the reusable structure of a single-agent RL
   training loop, extracted from `truco-py`'s `training/env.py`:
   `gamekit.rl.protocols` (`TurnBasedGame`, `ActionCodec`, `RewardFn` —
