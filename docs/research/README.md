@@ -79,5 +79,5 @@ sections are a floor, not a ceiling.
 | [018](018-human-baseline-sanity-check.md) | Human baseline as a sanity check for learned / hand-written agents | planned | 2026-09-29 |
 | [019](019-human-catan-game-data.md) | Human Catan game data as a training source | idea | 2026-09-29 |
 | [020](020-modular-trade-agent.md) | Modular agent: separate trade module over a strategy policy | idea | 2026-09-30 |
-| [021](021-decision-time-search.md) | Decision-time search for Catan: ISMCTS with the trained policy/value network as priors | idea | 2026-09-30 |
+| [021](021-decision-time-search.md) | Decision-time search for Catan: ISMCTS with the trained policy/value network as priors | tested (upper bound; self-model confirmation pending) | 2026-10-02 |
 | [022](022-league-ratings.md) | League ratings: anchored Bradley-Terry/Elo over a round-robin, with the win matrix alongside | planned | 2026-10-01 |
