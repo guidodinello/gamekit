@@ -35,37 +35,41 @@ module is `gamekit.league`.
 ### Pairwise ratings: Bradley-Terry, Elo, TrueSkill
 
 - Bradley-Terry models the probability that `i` beats `j` from per-agent strengths,
-  and MM (minorization-maximization) iterations give the maximum-likelihood fit.
-  Hunter's abstract: "simple conditions are stated that guarantee that each
-  algorithm described will produce a sequence that converges to the unique maximum
-  likelihood estimator" — [Hunter 2004, *MM algorithms for generalized
-  Bradley-Terry models*, Annals of Statistics
+  and MM (minorization-maximization) iterations fit it by maximum likelihood.
+  Hunter's paper presents MM algorithms for generalized Bradley-Terry models and
+  states conditions under which each converges to the unique maximum likelihood
+  estimator — [Hunter 2004, *MM algorithms for generalized Bradley-Terry models*,
+  Annals of Statistics
   32(1)](https://projecteuclid.org/journals/annals-of-statistics/volume-32/issue-1/MM-algorithms-for-generalized-Bradley-Terry-models/10.1214/aos/1079120141.full)
   — takeaway: the fit is an iteration with a convergence guarantee, which is why
-  `gamekit.league.ratings` can do it in a few lines of stdlib Python with no
-  numpy. I fetched only the abstract page; the exact existence condition (the
-  win graph must be strongly connected) is from my own reading of the model, not a
-  quote, and the code enforces it with a `ValueError` at `prior_draws=0`. The
-  original [Bradley & Terry 1952](https://www.jstor.org/stable/2334029) is on
-  JSTOR; the fetch returned only a site error page, so it is **not** relied on here.
+  `gamekit.league.ratings` can do it in a few lines of stdlib Python with no numpy.
+  **Unverified verbatim:** the title, author and year are confirmed (Crossref), but
+  Project Euclid blocked a direct fetch and Crossref carries no abstract, so the
+  convergence statement above is a paraphrase of a fetch summary, not a quote, and I
+  did not read the existence condition. The code enforces the usual one (the win
+  graph must be strongly connected) with a `ValueError` at `prior_draws=0`; that is
+  my own reading of the model. The original [Bradley & Terry
+  1952](https://www.jstor.org/stable/2334029) is on JSTOR; the fetch returned only a
+  site error page, so it is **not** relied on here.
 - Elo is the same logistic model fitted online: "Choosing learning rate η = 16 or 32
-  recovers the updates introduced by Arpad Elo", and a batch Elo update is at a
-  stationary point exactly when the predicted and empirical win-probability
-  matrices agree — [Balduzzi, Tuyls, Perolat & Graepel 2018, *Re-evaluating
-  Evaluation*](https://arxiv.org/abs/1806.02643) (NeurIPS; quotes from the PDF
-  body, section 2.1, not the abstract) — takeaway: a batch BT-MLE fit and "Elo" are
-  the same predictor, so we fit the batch MLE (order-independent, with CIs) and
-  report it on the Elo scale (`400 * log10(strength ratio)`).
-- TrueSkill adds an uncertainty per player and handles teams and draws: "The
-  TrueSkill ranking system is a skill based ranking system for Xbox Live developed
-  at Microsoft Research", with a mean and an uncertainty per player, "the team's
-  skill is assumed to be the sum of the skills of the players", and close
-  performances count as a draw — [TrueSkill ranking
+  recovers the updates introduced by Arpad Elo", and Elo ratings are at a stationary
+  point under batch updates "iff the matrices of empirical probabilities and
+  predicted probabilities have the same row-sums" (Proposition 1) — [Balduzzi,
+  Tuyls, Perolat & Graepel 2018, *Re-evaluating
+  Evaluation*](https://arxiv.org/abs/1806.02643) (NeurIPS; quotes from the PDF body,
+  section 2.1, not the abstract) — takeaway: that is the Bradley-Terry score equation
+  (each agent's observed total score equals its predicted total), so a batch BT-MLE
+  fit and "Elo" are the same predictor. We fit the batch MLE (order-independent,
+  with CIs) and report it on the Elo scale (`400 * log10(strength ratio)`).
+- TrueSkill adds an uncertainty per player and handles teams and draws; it keeps a
+  mean and an uncertainty per player, treats a team's skill as the sum of its
+  players' skills, and counts close performances as draws — [TrueSkill ranking
   system](https://www.microsoft.com/en-us/research/project/trueskill-ranking-system/)
   (Microsoft Research) — takeaway: it is the right tool for a ladder with few games
-  per player and many players. A closed round-robin of tens of agents with
-  thousands of games per pairing has no such sparsity, so we take the batch BT fit
-  with bootstrap CIs and leave TrueSkill out.
+  per player and many players. **Unverified verbatim:** this is a paraphrase of a
+  fetch summary; the page was unreachable by a direct request, so no quote is made.
+  A closed round-robin of tens of agents with thousands of games per pairing has no
+  such sparsity, so we take the batch BT fit with bootstrap CIs and leave TrueSkill out.
 
 ### Why anchor
 
@@ -87,13 +91,14 @@ module is `gamekit.league`.
 - Small samples and perfect scores need a prior. The BayesElo documentation says it
   "uses a prior distribution over ratings, that increases the likelihood that the
   ratings of players are close to each other", and a player with a perfect 10-0
-  gets 169 Elo from BayesElo versus 300 from Elostat — [Coulom, *Bayesian
+  is rated 169 Elo by BayesElo against 300 by Elostat, in a two-player table where the
+  loser gets the mirror image (a 338-point versus a 600-point gap) — [Coulom, *Bayesian
   Elo*](https://www.remi-coulom.fr/Bayesian-Elo/) — takeaway: without a prior, a
   10-0 pairing has no finite rating. The page does **not** describe how its prior
   is built, so ours is not a reimplementation: `gamekit.league` adds
   `prior_draws=1` virtual game (half a win each way) per played pairing. That only
   keeps the fit finite; it is much weaker than BayesElo's, and a 10-0 result still
-  rates +529 Elo with a bootstrap interval of [213, 529] (observed by running the
+  gives a 529-point gap (BayesElo's is 338) with a bootstrap interval of [213, 529] (observed by running the
   module). Treat few-game pairings with the Wilson interval in the matrix, not the
   rating.
 
@@ -104,15 +109,17 @@ module is `gamekit.league`.
   scissors will all receive the same Elo ratings. Elo's predictions are p̂ij = 1/2
   for all i, j" — Balduzzi et al. 2018 (PDF body) — takeaway: this is exactly our
   rock-paper-scissors unit test, where the three ratings come out equal while the
-  matrix has 90% edges. The rating alone would hide it.
+  matrix has 90% edges. It is also why: the 0.9/0.1 matrix has the same row sums as
+  the all-0.5 prediction, so equal ratings are an exact fixed point of the fit, and
+  only the per-pairing residual in the matrix shows the misfit.
 - Real games are mostly transitive with a cyclic tail: "their geometrical structure
   resemble a spinning top, with … cycles that exist at a particular transitive
   strength", measured over nine two-player zero-sum games including Go and StarCraft
   II — [Czarnecki et al. 2020, *Real World Games Look Like Spinning
   Tops*](https://arxiv.org/abs/2004.09468) — takeaway: expect a single rating to
   rank most of a league correctly and fail among agents of similar strength, which is
-  where our checkpoints and rule bots are. The abstract gives the geometry only; I
-  did not extract the paper's quantitative claims.
+  where our checkpoints and rule bots are. Quotes checked against the abstract page;
+  I did not read the paper body, so none of its quantitative claims are used.
 - `gamekit.league` therefore always returns the raw matrix with Wilson intervals
   (`gamekit.mc.wilson_interval`), the BT-predicted rate and the residual per pairing,
   and every 3-cycle `A > B > C > A` among **significant** edges only: an edge needs
@@ -180,9 +187,11 @@ module is `gamekit.league`.
   Random and Threshold anchors, **after** the engine fixes, run overnight on the
   homelab HP; catan — rank `catan_bc_ft_long`, `rl_search` (catan log 011),
   `Heuristic` and `TradingHeuristic`. State the roster and the anchor with every result.
-- **Cost estimate:** `k` agents need `k(k-1)/2` pairings. At truco's measured ~24
-  matches/s vs Threshold (log 008), 12 agents × 4000 matches per pairing is 66
-  pairings, about 3 hours single-process, so overnight on the HP is right. Results are
+- **Cost estimate:** `k` agents need `k(k-1)/2` pairings. The issue's truco roster is
+  log 008's 12 checkpoints plus Random and Threshold, 14 agents and 91 pairings; at
+  4000 matches each and the ~24 matches/s a laptop smoke test measured vs Threshold
+  (log 008), that is about 4.2 hours single-process. RL-vs-RL pairings may be
+  slower than that figure, so budget overnight on the HP. Results are
   one JSON per pairing via `gamekit.results`, so an interrupted run resumes by pairing.
 
 ## Result

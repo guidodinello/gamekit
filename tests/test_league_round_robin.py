@@ -163,6 +163,17 @@ def test_adding_an_agent_leaves_existing_pairings_untouched(tmp_path: Path) -> N
     assert pairing_seeds(11, "a", "b") != pairing_seeds(12, "a", "b")
 
 
+def test_shrinking_the_roster_drops_the_removed_agent_from_the_summary(
+    tmp_path: Path,
+) -> None:
+    _league(tmp_path, StubPlayer(), agents=("random", "mid", "strong", "twin_a"))
+    player = StubPlayer()
+    summary = _league(tmp_path, player)  # same dir, three agents
+    assert player.calls == 0  # every needed pairing is already on disk
+    assert summary["agents"] == ["mid", "random", "strong"]
+    assert not any("twin_a" in key for key in summary["matrix"])
+
+
 def test_agent_names_are_validated(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="distinct"):
         _league(tmp_path, StubPlayer(), agents=("random", "random"))

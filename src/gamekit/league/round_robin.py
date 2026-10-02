@@ -274,8 +274,16 @@ def run_league[R](
         partial = write_result(league_dir, f"{stem}.partial", payload)
         os.replace(partial, final)
 
+    # Only this run's roster: a directory reused after the roster shrank may
+    # hold pairings (never config-checked here) for agents no longer in it.
+    roster = set(agents)
+    in_roster = [
+        p
+        for p in load_pairings(league_dir)
+        if {p["league_config"]["a"], p["league_config"]["b"]} <= roster
+    ]
     summary = summarize_league(
-        load_pairings(league_dir),
+        in_roster,
         anchor=anchor,
         anchor_rating=anchor_rating,
         prior_draws=prior_draws,
