@@ -1,7 +1,7 @@
 # 022 — League ratings: anchored Bradley-Terry/Elo over a round-robin, with the win matrix alongside
 
 **Status:** planned
-**Last touched:** 2026-10-01
+**Last touched:** 2026-10-05
 
 ## Hypothesis
 
@@ -199,6 +199,15 @@ module is `gamekit.league`.
 Not yet run. The module and its tests are in [gamekit#38](https://github.com/guidodinello/gamekit/issues/38);
 the first league results will be linked from here once the consumer repos have
 logs.
+
+**Added 2026-10-05, truco-py log 009** ([log](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/009-retrain-mixed-pool.md), [PR #33](https://github.com/guidodinello/truco-py/pull/33)): no
+league has been run, so this note's status is unchanged. But the
+motivation above cites Threshold beating Random only 52.2%; 009's Phase 0
+re-measured it on the rebuilt engine at **87.5% [86.5, 88.5]** (n=4000,
+seat-rotated), so that figure is void and "vs Random" is saturated, not weak.
+009 therefore treats vs-Random as descriptive and uses a held-out VonNeumann as
+its second yardstick, which is the single-opponent problem this note addresses.
+No external source; observed in the log.
 
 ## Related notes
 

@@ -1,7 +1,7 @@
 # 011 — KL guard vs the previous snapshot
 
-**Status:** planned
-**Last touched:** 2026-09-27
+**Status:** running
+**Last touched:** 2026-10-05
 
 ## Hypothesis
 
@@ -160,6 +160,22 @@ untried direction, without implementing or testing it — a narrower proposal
 than this note's "guard vs the previous snapshot," anchoring the guard to
 the BC clone's starting policy specifically rather than a rolling recent
 checkpoint.
+
+**Result from truco-py log 009 (2026-10-05), an online negative control:**
+2026-10-05: status moved from `planned` to `running` (interim evidence only).
+The paragraph at the top of this Result, "Not yet implemented in either
+consumer repo", is true of gamekit and is kept as history; it is no longer true
+of truco-py. truco-py log [009](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/009-retrain-mixed-pool.md) ([PR #33](https://github.com/guidodinello/truco-py/pull/33)) shipped
+`PolicyFreezeDetector` in its own `training/collapse.py` and fed it once per PPO
+update in both arms (`training/run.py` builds it with the defaults: window 20,
+ratio 0.5, patience 3, plus the absolute near-zero fallback). **It never fired
+in either arm over 20M steps each, and neither arm collapsed** (M and C both
+ended at 91-92% vs Threshold). No external source; observed in the log.
+
+What this is and is not: two healthy runs with zero false fires, an online
+negative control. It is not gate 2 (offline replay on catan logs 002-004), and
+not gate 3 (a collapse triggered on purpose), so it says nothing about
+detection lead time. The gamekit-side `PolicyFreezeDetector` is still not built.
 
 ## Related notes
 
