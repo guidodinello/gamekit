@@ -59,19 +59,19 @@ sections are a floor, not a ceiling.
 
 | id | title | status | last touched |
 |---|---|---|---|
-| [001](001-self-play-opponent-mix.md) | Self-play opponent mix vs a fixed baseline | running | 2026-09-29 |
-| [002](002-bc-warm-start.md) | Behavior-cloning warm start before PPO | running | 2026-09-23 |
+| [001](001-self-play-opponent-mix.md) | Self-play opponent mix vs a fixed baseline | tested (truco 009: mix lost held out, one seed) | 2026-10-05 |
+| [002](002-bc-warm-start.md) | Behavior-cloning warm start before PPO | running | 2026-10-05 |
 | [003](003-discount-horizon.md) | Discount horizon vs episode length | validated | 2026-09-20 |
 | [004](004-factored-action-head.md) | Factored action head via sequential atom composition | validated | 2026-09-21 |
 | [005](005-eval-statistics.md) | Eval statistics: Wilson intervals and eval-in-loop | validated | 2026-09-30 |
 | [006](006-uniform-atoms-baseline.md) | Uniform-over-atoms baseline is not `RandomAgent` | validated | 2026-09-20 |
 | [007](007-inference-thread-oversubscription.md) | Inference-worker thread oversubscription | validated | 2026-09-21 |
 | [008](008-board-aware-encoder.md) | Board-aware encoder / spatial inductive bias | idea | 2026-09-23 |
-| [009](009-longer-runs-and-resume.md) | Longer runs / resume when the curve has not bent | tested (inconclusive) | 2026-09-29 |
+| [009](009-longer-runs-and-resume.md) | Longer runs / resume when the curve has not bent | tested (inconclusive) | 2026-10-05 |
 | [010](010-entropy-schedule.md) | Entropy schedule instead of a fixed coefficient | tested (010b rejected, one seed) | 2026-09-30 |
-| [011](011-kl-guard.md) | KL guard vs the previous snapshot | planned | 2026-09-27 |
+| [011](011-kl-guard.md) | KL guard vs the previous snapshot | running | 2026-10-05 |
 | [012](012-trade-heads.md) | Enable the reserved trade heads | idea | 2026-09-29 |
-| [013](013-selfplay-pool-contamination.md) | Self-play pool contamination across runs | validated | 2026-09-21 |
+| [013](013-selfplay-pool-contamination.md) | Self-play pool contamination across runs | validated | 2026-10-05 |
 | [014](014-per-hand-vs-match-win-rate.md) | Per-hand win-rate ceiling vs match-play compounding | idea | 2026-09-27 |
 | [015](015-shaped-reward-breaks-rew-proxy.md) | Reward shaping invalidates the `ep_rew_mean` win-rate proxy | validated | 2026-09-21 |
 | [016](016-positional-advantage-rotation.md) | Positional (mano) advantage must be rotated out of a benchmark arm | validated (mechanism) | 2026-09-21 |
@@ -80,4 +80,4 @@ sections are a floor, not a ceiling.
 | [019](019-human-catan-game-data.md) | Human Catan game data as a training source | idea | 2026-09-29 |
 | [020](020-modular-trade-agent.md) | Modular agent: separate trade module over a strategy policy | idea | 2026-09-30 |
 | [021](021-decision-time-search.md) | Decision-time search for Catan: ISMCTS with the trained policy/value network as priors | tested (upper bound; self-model confirmation pending) | 2026-10-02 |
-| [022](022-league-ratings.md) | League ratings: anchored Bradley-Terry/Elo over a round-robin, with the win matrix alongside | planned | 2026-10-01 |
+| [022](022-league-ratings.md) | League ratings: anchored Bradley-Terry/Elo over a round-robin, with the win matrix alongside | planned | 2026-10-05 |

@@ -1,7 +1,7 @@
 # 009 — Longer runs / resume when the curve has not bent
 
 **Status:** tested (inconclusive)
-**Last touched:** 2026-09-29
+**Last touched:** 2026-10-05
 
 ## Hypothesis
 
@@ -275,6 +275,21 @@ directly: "would more fine-tune steps past 3M keep climbing, given the run
 never regressed enough to stop?" Log 004 itself did not test it — it
 stopped at its pre-set step ceiling, not because the curve had bent; log
 006 above is the test.
+
+**Added 2026-10-05, truco-py log 009** ([log](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/009-retrain-mixed-pool.md), [PR #33](https://github.com/guidodinello/truco-py/pull/33)). Status
+unchanged. Same protocol shape as above in a different regime, so supporting
+evidence and not a new verdict. No external source; observed in the log.
+
+- **Fixed points, not in-loop evals:** arm M benchmarked at 5M / 10M / 20M,
+  n=4000 each, vs Threshold, with the pairwise trend family under BH (q = 0.05),
+  the form recommended in the protocol lesson above. 10M - 5M: +5.33 pts,
+  p = 3.4e-13; 20M - 5M: +6.67 pts, p < 1e-15 (underflows); 20M - 10M: +1.35
+  pts, p = 0.034. All three rejected, so M was still improving vs Threshold
+  between 10M and 20M (85.2% -> 90.5% -> 91.8%), though the last step is small
+  and one seed. In-loop eval (n=200) stayed an alarm only.
+- **Resume path exercised:** 2 night stops and 2 resumes, every one logged in
+  009's Deviations table. Stops were clean (`STOP` file, `run.json` status
+  `stopped`); a resume replays the opponent draws, declared harmless.
 
 ## Related notes
 

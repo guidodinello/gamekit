@@ -1,7 +1,7 @@
 # 001 — Self-play opponent mix vs a fixed baseline
 
-**Status:** running
-**Last touched:** 2026-09-29
+**Status:** tested (truco 009: mix lost held out, one seed)
+**Last touched:** 2026-10-05
 
 ## Hypothesis
 
@@ -117,6 +117,49 @@ run: catan log
 ran 10M more steps and plateaued at about 20-21% vs `HeuristicAgent`, but it
 held `--baseline-mix` at 0.5, so it does not isolate the mix ratio and is not
 the clean-pool attempt this note is waiting for.
+
+**Result from truco-py log 009 (2026-10-05):**
+truco-py log [009](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/009-retrain-mixed-pool.md) ([PR #33](https://github.com/guidodinello/truco-py/pull/33)), a clean run-scoped pool, BC warm
+start, one seed per arm, 20M steps each, n=4000 seat-rotated finals. 2026-10-05:
+status moved from `running` to `tested (truco 009: mix lost held out, one seed)`;
+the paragraphs above stay as the history up to that point. No external source;
+observed in the log.
+
+*Pre-registered:*
+
+- **Arms.** M: opponent team per episode Threshold 0.4 / Random 0.2 / own
+  snapshot 0.4, partners = latest own snapshot. C: Threshold-only opponents,
+  same partners and everything else.
+- **H2 (primary), vs held-out VonNeumann:** M 56.8% [55.3, 58.3] vs C 64.1%
+  [62.6, 65.5], M - C = -7.28 pts (95% CI [-9.41, -5.14], p = 2.9e-11). Verdict
+  rung 4, "Control better".
+- **vs Threshold:** M 91.8% [90.9, 92.6] vs C 91.2% [90.3, 92.1], difference
+  +0.58 pts [-0.64, 1.79]: equal at 20M.
+- **vs Random** (descriptive only, saturated; Threshold vs Random is 87.5%
+  [86.5, 88.5]): M 87.0%, C 93.4%.
+- The freeze detector never fired in either arm (see [011](011-kl-guard.md)).
+
+*What it means for this note:* 009 is negative evidence for mixing self
+snapshots and Random into the opponent pool, measured on a held-out opponent.
+It does **not** test this note's literal claim that a heavier baseline share
+*speeds up* progress: only M was benchmarked at 5M and 10M, so there is no
+speed comparison between arms, and against Threshold the arms are equal at 20M.
+It is not `rejected` either: one seed per arm, one held-out opponent, and
+truco rather than catan (the catan gate above is still the target).
+
+*Post-hoc (not pre-registered):* C's 64.1% vs VonNeumann sits at Threshold's
+own 64.6% [63.1, 66.1] vs VonNeumann, so neither arm surpassed its teacher
+against the held-out opponent.
+
+*Hypothesis, NOT tested by 009:* self-snapshot opponents (and partners) are the
+cause of M's gap. 009 cannot separate this: M changes two things at once (self
+0.4 and Random 0.2), and partners were the latest own snapshot in **both** arms.
+
+*Next (proposed, not run):* same protocol, vs C, ideally more than one seed:
+(a) `--opponent-mix thr=0.8,rand=0.2,self=0`, one change from M (self swapped
+for Threshold) and one from C (Random 0.2 added), isolating the self share;
+(b) `--partners threshold` with otherwise C's config, for the partner half
+(truco `training/run.py` accepts `snapshot`, `threshold`, `pool`).
 
 ## Related notes
 

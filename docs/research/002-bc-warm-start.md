@@ -1,7 +1,7 @@
 # 002 — Behavior-cloning warm start before PPO
 
 **Status:** running
-**Last touched:** 2026-09-23
+**Last touched:** 2026-10-05
 
 ## Hypothesis
 
@@ -118,6 +118,26 @@ builds a single `TensorDataset`/`DataLoader` over the whole 650,312-pair
 collection, with no train/val split anywhere in the file, and the same
 batches the optimizer just updated on are what `accuracy` is scored against
 inside the same epoch loop.
+
+**Result from truco-py log 009 (2026-10-05):** truco-py log [009](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/009-retrain-mixed-pool.md)
+([PR #33](https://github.com/guidodinello/truco-py/pull/33)) repeated the BC step on the rebuilt engine, this time with a
+genuine split. Status stays `running`. No external source; observed in the log.
+
+- **Held-out accuracy now measured for truco:** 604,308 `(obs, action)` pairs
+  from 48,521 games, validation = the 4,865 games with `game_id % 10 == 0`
+  (60,260 samples); validation accuracy **95.5%** (gate 70%), best epoch 10 of
+  10. This is the held-out number the paragraph above says truco log 002 never
+  had.
+- **The clone still plays far below its teacher:** `bc_init` scored **39.7%
+  [38.2, 41.2]** vs Threshold (n=4000, seat-rotated), outside the
+  pre-registered soft band [45%, 55%]; vs VonNeumann 50.1% [48.6, 51.7]. High
+  action accuracy did not carry over to play, the same pattern as catan log 004.
+- **PPO recovered it:** both arms started from this clone and reached 91.8% (M)
+  and 91.2% (C) vs Threshold at 20M steps; M was already 85.2% [84.0, 86.2] at
+  5M.
+- **Still no verdict on the hypothesis:** there is no cold-start arm (009 lists
+  "no BC-vs-cold-start ablation" under its limitations), so "BC gets PPO there
+  faster" remains untested in truco as well.
 
 ## Related notes
 

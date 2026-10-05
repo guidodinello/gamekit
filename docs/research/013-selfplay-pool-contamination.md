@@ -1,7 +1,7 @@
 # 013 — Self-play pool contamination across runs
 
 **Status:** validated
-**Last touched:** 2026-09-21
+**Last touched:** 2026-10-05
 
 ## Hypothesis
 
@@ -74,6 +74,15 @@ recorded the failure (truco-py has not yet adopted the fix — pinned at
 gamekit 0.2.0 as of those logs); catan log
 [003](https://github.com/guidodinello/catan/blob/main/docs/experiments/003-selfplay-v2-baseline-mix-0.5.md)
 used the fix from the start and never reproduced the collapse.
+
+**Added 2026-10-05, truco-py log 009** ([log](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/009-retrain-mixed-pool.md), [PR #33](https://github.com/guidodinello/truco-py/pull/33)). The
+sentence above that truco-py "has not yet adopted the fix" is dated to those
+April and June logs. truco-py has since pinned gamekit at `76c364b` (the
+run-scoped `OpponentPool` itself is PR #24 / 0.3.0) and used it for log 009; its
+Phase 0 check found the pool held only the run's own snapshots. Arm M then
+sampled that pool for 40% of opponent episodes for 20M steps without a
+collapse. One run, so this is consistent with the fix and does not add to the
+validation. No external source; observed in the log.
 
 ## Related notes
 
