@@ -1,7 +1,7 @@
 # 022 — League ratings: anchored Bradley-Terry/Elo over a round-robin, with the win matrix alongside
 
-**Status:** planned
-**Last touched:** 2026-10-05
+**Status:** running
+**Last touched:** 2026-10-07
 
 ## Hypothesis
 
@@ -208,6 +208,60 @@ seat-rotated), so that figure is void and "vs Random" is saturated, not weak.
 009 therefore treats vs-Random as descriptive and uses a held-out VonNeumann as
 its second yardstick, which is the single-opponent problem this note addresses.
 No external source; observed in the log.
+
+**First use, truco-py log 010 (2026-10-07):** status moved from `planned` to
+`running` (interim evidence only: the truco first use is done, the catan one is
+not). The "Not yet run" paragraph above is kept as history; it is no longer true.
+truco-py log
+[010](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/010-league-009-checkpoints.md)
+([PR #35](https://github.com/guidodinello/truco-py/pull/35), merged as `1c52ab0`)
+ran the first league on `gamekit.league` (gamekit 0.3.0 at `76c364b`): 9 agents
+(the seven log 009 checkpoints M5/M10/M20/C5/C10/C20 and bc_init, plus Threshold
+and Random), 36 pairings, n=10000 each, `num_seats=2` team slots, `prior_draws=1`,
+1000 bootstrap resamples, anchor **Threshold = 0**. Two departures from this note's
+plan: the roster is the 009 checkpoints, not the 008 ones (#26 invalidated those),
+and the anchor is Threshold, not Random = 0 as issue #38 proposed. Descriptive: log
+010 pre-registered that no verdict is scored for this note, so none is scored here.
+No external source; observed in the log, and every number below was checked
+against its `league.json`, except where a bullet names another source.
+
+- **Ratings (Elo, 95% bootstrap CI):** M20 353.2 [348.9, 357.2], M10 333.4
+  [329.6, 337.2], C20 308.3 [304.4, 312.2], C10 305.4 [301.3, 309.3], M5 298.9
+  [294.9, 302.9], C5 285.4 [281.5, 288.9], Threshold 0, bc_init -13.3 [-17.1, -9.7],
+  Random -171.7 [-175.9, -167.2]. No ties in any pairing, no significant 3-cycle.
+  Every Wilson half-width is under 1 point.
+- **M beats C head to head at every matched step:** M5 vs C5 54.8%, M10 vs C10
+  57.0%, M20 vs C20 58.9%. VonNeumann is not in this roster, so this does not
+  contradict log 009's vs-VonNeumann ordering.
+- **What the matrix shows that the rating hides.** The four largest
+  Bradley-Terry residuals are Random cells (Random vs Threshold 12.7% against a
+  predicted 27.1%; vs bc_init 17.0% vs 28.7%; vs M5 15.6% vs 6.2%; M20 vs Random
+  86.7% against a predicted 95.4%); the fifth is bc_init vs Threshold. The two lines treat Random differently: the M
+  line beats it less often than it beats Threshold (M20 86.7% vs 92.5%), the C line
+  more often (C5 94.1% vs 88.3%). And M5 beats C10 (52.1%) and C20 (51.4%) head to
+  head although it rates below both.
+- **Seat rotation and reproducibility.** Seat split 49.9 / 50.1 in C20 vs M20 (from
+  that pairing file). Per the log, a C20-vs-M20 cross-check at n=200 was identical
+  (wins, ties, config hash, winners sha256) on the laptop (torch cu128) and the HP
+  (torch cpu).
+- **Cost, per the log:** 6 h 47 m on the HP with 3 workers; the 21 RL-vs-RL
+  pairings dominate, and the HP measured about 7x slower per core than the laptop.
+- **What the API did well:** pairing seeds and the config hash do not depend on the
+  roster, so the parallel workaround below writes the same files a full run would;
+  resume refuses a pairing with a different hash and the stamps could be re-derived
+  from the files; `summarize_league` is pure over the files, so re-summarizing needs
+  no replay; pairing files are written to a temp name and renamed.
+- **Where it was awkward.** `run_league` is serial, so 3 workers took one 2-agent
+  `run_league(agents=[a, b], anchor=a, n_bootstrap=10)` call per pairing in a process
+  pool; `anchor` and the small `n_bootstrap` only serve the summary each call
+  produces as a side effect. That side effect is a race: each call writes
+  `league.json` with a plain write, last writer wins, and the content is a 2-agent
+  summary. The in-run copy was discarded and `league.json` regenerated from the 36
+  pairing files. Pairing files were not affected.
+- **Not exercised yet:** the N>2 seat reduction (catan), ties, and the prior at small n.
+- **Next:** the catan first use. A run-pairing API plus an atomic `league.json`
+  write would remove the workaround:
+  [gamekit#47](https://github.com/guidodinello/gamekit/issues/47).
 
 ## Related notes
 
