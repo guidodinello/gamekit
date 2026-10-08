@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gamekit Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column; the module map is a wide figure, data flows are step strips that stack on phones.
+   Layer hues: core = teal, mc = amber, evaluation = blue, rl = violet, external = slate. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #19202b;
+  --muted: #5a6574;
+  --line: #d6dbe3;
+  --edge: #4b5563;
+  --core: #0f766e;
+  --mc: #b45309;
+  --eval: #1d4ed8;
+  --rl: #7c3aed;
+  --ext: #64748b;
+  --warn: #b91c1c;
+  --font-display: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10141b; --surface: #171d27; --fg: #e5e9ef; --muted: #9aa4b2; --line: #2b3442; --edge: #a3adbb;
+    --core: #2dd4bf; --mc: #fbbf24; --eval: #7aa7ff; --rl: #b69cff; --ext: #94a3b8; --warn: #f87171;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10141b; --surface: #171d27; --fg: #e5e9ef; --muted: #9aa4b2; --line: #2b3442; --edge: #a3adbb;
+  --core: #2dd4bf; --mc: #fbbf24; --eval: #7aa7ff; --rl: #b69cff; --ext: #94a3b8; --warn: #f87171;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 64px; display: grid; gap: 44px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-display); font-size: clamp(28px, 5vw, 40px); line-height: 1.1; margin: 0; font-weight: 700; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-size: 22px; margin: 0; font-weight: 650; text-wrap: balance; }
+h3 { font-size: 15px; margin: 0; font-weight: 650; }
+p { margin: 0; max-width: 72ch; }
+.lede { color: var(--muted); font-size: 16px; }
+code, .mono { font-family: var(--font-mono); font-size: .86em; }
+section { display: grid; gap: 16px; min-width: 0; }
+
+/* legend */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid; }
+.sw.core { border-color: var(--core); background: color-mix(in srgb, var(--core) 14%, var(--surface)); }
+.sw.mc { border-color: var(--mc); background: color-mix(in srgb, var(--mc) 14%, var(--surface)); }
+.sw.eval { border-color: var(--eval); background: color-mix(in srgb, var(--eval) 14%, var(--surface)); }
+.sw.rl { border-color: var(--rl); background: color-mix(in srgb, var(--rl) 14%, var(--surface)); }
+.sw.ext { border-color: var(--ext); border-style: dashed; background: var(--surface); }
+.ln { width: 26px; height: 0; border-top: 1.6px solid var(--edge); position: relative; }
+.ln::after { content: ""; position: absolute; right: -1px; top: -5px; border: 4.5px solid transparent; border-left: 7px solid var(--edge); border-right: 0; }
+
+/* module map figure */
+figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
+.scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.scroll svg { display: block; width: 100%; min-width: 760px; height: auto; color: var(--edge); }
+figcaption { font-size: 13px; color: var(--muted); max-width: 80ch; }
+
+svg .node rect { stroke-width: 1.5; }
+svg .core rect { stroke: var(--core); fill: color-mix(in srgb, var(--core) 10%, var(--surface)); }
+svg .mc rect { stroke: var(--mc); fill: color-mix(in srgb, var(--mc) 10%, var(--surface)); }
+svg .eval rect { stroke: var(--eval); fill: color-mix(in srgb, var(--eval) 10%, var(--surface)); }
+svg .rl rect { stroke: var(--rl); fill: color-mix(in srgb, var(--rl) 10%, var(--surface)); }
+svg .ext rect { stroke: var(--ext); fill: var(--surface); stroke-dasharray: 5 4; }
+svg .pkg { fill: none; stroke: var(--mc); stroke-dasharray: 6 5; stroke-width: 1.2; }
+svg .t-name { font-family: var(--font-mono); font-size: 13px; font-weight: 600; fill: var(--fg); }
+svg .t-sub { font-family: var(--font-body); font-size: 11.5px; fill: var(--muted); }
+svg .t-col { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; fill: var(--muted); }
+svg .t-pkg { font-family: var(--font-mono); font-size: 11px; fill: var(--mc); }
+svg .e { fill: none; stroke: var(--edge); stroke-width: 1.4; }
+svg .divider { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 5; }
+
+/* module index */
+.modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.group { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; border-top: 3px solid var(--c); min-width: 0; }
+.group.core { --c: var(--core); } .group.mc { --c: var(--mc); } .group.eval { --c: var(--eval); } .group.rl { --c: var(--rl); }
+.group h3 { color: var(--c); font-family: var(--font-mono); font-size: 13px; }
+.group dl { margin: 0; display: grid; gap: 7px; }
+.group dt { font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; }
+.group dd { margin: 0; font-size: 13.5px; color: var(--muted); }
+
+/* contracts table */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+td code { white-space: nowrap; }
+td .sig { display: block; font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: normal; }
+.pill { display: inline-block; font-family: var(--font-mono); font-size: 11px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--c); color: var(--c); white-space: nowrap; }
+.pill.core { --c: var(--core); } .pill.rl { --c: var(--rl); } .pill.eval { --c: var(--eval); } .pill.mc { --c: var(--mc); }
+
+/* data flows */
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0; counter-reset: step; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.step { padding: 14px 16px; display: grid; gap: 6px; align-content: start; border-right: 1px solid var(--line); position: relative; min-width: 0; }
+.step:last-child { border-right: 0; }
+.step .k { font-family: var(--font-mono); font-size: 11px; color: var(--c, var(--muted)); letter-spacing: .05em; text-transform: uppercase; }
+.step h3 { font-size: 14px; }
+.step p { font-size: 13px; color: var(--muted); }
+.step.game { --c: var(--ext); background: color-mix(in srgb, var(--ext) 7%, var(--surface)); }
+.step.eval { --c: var(--eval); } .step.mc { --c: var(--mc); } .step.rl { --c: var(--rl); } .step.core { --c: var(--core); }
+.step.outside { background: repeating-linear-gradient(135deg, transparent 0 8px, color-mix(in srgb, var(--ext) 8%, transparent) 8px 9px); }
+.note { font-size: 13.5px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 12px; max-width: 80ch; }
+.note strong { color: var(--fg); font-weight: 600; }
+@media (max-width: 720px) {
+  .step { border-right: 0; border-bottom: 1px solid var(--line); }
+  .step:last-child { border-bottom: 0; }
+}
+
+/* consumers */
+.consumers { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card .dep { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; }
+.card li code { overflow-wrap: anywhere; }
+.surprises { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 14px; max-width: 85ch; }
+footer { font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">gamekit 0.3.0 · origin/main · src/gamekit</div>
+    <h1>gamekit Architecture</h1>
+    <p class="lede">A game-agnostic toolkit shared by <code>truco-py</code> and <code>catan</code>. It has a stdlib-only core and two independent stacks on top: seat-rotated evaluation (benchmark, league, statistics) and single-agent RL plumbing. No module imports a game engine. Games plug in through Protocols and plain callables.</p>
+  </header>
+
+  <section aria-labelledby="map">
+    <h2 id="map">Module map</h2>
+    <div class="legend" role="list">
+      <span role="listitem"><i class="sw core"></i>core</span>
+      <span role="listitem"><i class="sw mc"></i>mc statistics</span>
+      <span role="listitem"><i class="sw eval"></i>evaluation</span>
+      <span role="listitem"><i class="sw rl"></i>rl</span>
+      <span role="listitem"><i class="sw ext"></i>external dependency</span>
+      <span role="listitem"><i class="ln"></i>A uses symbols defined in B (from import statements)</span>
+    </div>
+    <figure>
+      <div class="scroll">
+        <svg viewBox="0 0 1000 520" role="img" aria-label="Import graph of gamekit. Evaluation column: league.round_robin imports benchmark, league.ratings, results and seats; benchmark imports mc, results and seats; league.ratings imports mc. RL column: rl.env imports driver, masking, selfplay, protocols, agent and gymnasium/numpy; driver imports protocols and agent; masking imports protocols; selfplay imports agent. The two columns share no edges.">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+            </marker>
+          </defs>
+
+          <text class="t-col" x="40" y="16">EVALUATION PATH · stdlib</text>
+          <text class="t-col" x="600" y="16">RL PATH · [rl] extra for env only</text>
+          <line class="divider" x1="577" y1="6" x2="577" y2="408"></line>
+
+          <g transform="translate(0,20)">
+            <!-- ===== edges: evaluation ===== -->
+            <path class="e" d="M280,56 H298" marker-end="url(#arr)"></path>
+            <path class="e" d="M200,82 V148" marker-end="url(#arr)"></path>
+            <path class="e" d="M60,82 V418" marker-end="url(#arr)"></path>
+            <path class="e" d="M85,82 V392 H200 V418" marker-end="url(#arr)"></path>
+            <path class="e" d="M130,202 V418" marker-end="url(#arr)"></path>
+            <path class="e" d="M255,202 V418" marker-end="url(#arr)"></path>
+            <path class="e" d="M280,176 H298" marker-end="url(#arr)"></path>
+            <path class="e" d="M430,82 V138" marker-end="url(#arr)"></path>
+            <!-- mc internal -->
+            <path class="e" d="M430,219 V328" marker-end="url(#arr)"></path>
+            <path class="e" d="M370,295 V328" marker-end="url(#arr)"></path>
+            <path class="e" d="M490,295 V328" marker-end="url(#arr)"></path>
+
+            <!-- ===== edges: rl ===== -->
+            <path class="e" d="M800,56 H828" marker-end="url(#arr)"></path>
+            <path class="e" d="M650,82 V148" marker-end="url(#arr)"></path>
+            <path class="e" d="M785,82 V148" marker-end="url(#arr)"></path>
+            <path class="e" d="M800,72 L898,148" marker-end="url(#arr)"></path>
+            <path class="e" d="M600,56 H588 V302 H598" marker-end="url(#arr)"></path>
+            <path class="e" d="M588,302 V446 H788" marker-end="url(#arr)"></path>
+            <path class="e" d="M650,202 V268" marker-end="url(#arr)"></path>
+            <path class="e" d="M760,202 L725,268" marker-end="url(#arr)"></path>
+            <path class="e" d="M815,202 L850,418" marker-end="url(#arr)"></path>
+            <path class="e" d="M930,202 V418" marker-end="url(#arr)"></path>
+
+            <!-- ===== nodes: evaluation ===== -->
+            <g class="node eval"><rect x="40" y="30" width="240" height="52" rx="7"></rect>
+              <text class="t-name" x="160" y="52" text-anchor="middle">league.round_robin</text>
+              <text class="t-sub" x="160" y="70" text-anchor="middle">run_league · ScheduledGame</text></g>
+            <g class="node eval"><rect x="300" y="30" width="260" height="52" rx="7"></rect>
+              <text class="t-name" x="430" y="52" text-anchor="middle">league.ratings</text>
+              <text class="t-sub" x="430" y="70" text-anchor="middle">Bradley-Terry · Elo · win_matrix</text></g>
+            <g class="node eval"><rect x="110" y="150" width="170" height="52" rx="7"></rect>
+              <text class="t-name" x="195" y="172" text-anchor="middle">benchmark</text>
+              <text class="t-sub" x="195" y="190" text-anchor="middle">run_arm · build_parser</text></g>
+
+            <rect class="pkg" x="300" y="140" width="260" height="248" rx="10"></rect>
+            <text class="t-pkg" x="314" y="160">gamekit.mc (package import)</text>
+            <g class="node mc"><rect x="315" y="171" width="230" height="48" rx="7"></rect>
+              <text class="t-name" x="430" y="191" text-anchor="middle">sample · accumulate</text>
+              <text class="t-sub" x="430" y="208" text-anchor="middle">stopping · variance (MC fold)</text></g>
+            <g class="node mc"><rect x="315" y="255" width="110" height="40" rx="7"></rect>
+              <text class="t-name" x="370" y="280" text-anchor="middle">testing</text></g>
+            <g class="node mc"><rect x="435" y="255" width="110" height="40" rx="7"></rect>
+              <text class="t-name" x="490" y="280" text-anchor="middle">sample_size</text></g>
+            <g class="node mc"><rect x="315" y="330" width="230" height="46" rx="7"></rect>
+              <text class="t-name" x="430" y="350" text-anchor="middle">intervals</text>
+              <text class="t-sub" x="430" y="367" text-anchor="middle">wilson_interval · MCResult</text></g>
+
+            <g class="node core"><rect x="40" y="420" width="115" height="52" rx="7"></rect>
+              <text class="t-name" x="97" y="442" text-anchor="middle">seats</text>
+              <text class="t-sub" x="97" y="460" text-anchor="middle">rotate · seat_rng</text></g>
+            <g class="node core"><rect x="165" y="420" width="115" height="52" rx="7"></rect>
+              <text class="t-name" x="222" y="442" text-anchor="middle">results</text>
+              <text class="t-sub" x="222" y="460" text-anchor="middle">stamp · write_result</text></g>
+
+            <!-- ===== nodes: rl ===== -->
+            <g class="node rl"><rect x="600" y="30" width="200" height="52" rx="7"></rect>
+              <text class="t-name" x="700" y="52" text-anchor="middle">rl.env</text>
+              <text class="t-sub" x="700" y="70" text-anchor="middle">SingleAgentEnv (gym.Env)</text></g>
+            <g class="node ext"><rect x="830" y="30" width="150" height="52" rx="7"></rect>
+              <text class="t-name" x="905" y="52" text-anchor="middle">gymnasium</text>
+              <text class="t-sub" x="905" y="70" text-anchor="middle">+ numpy · [rl] extra</text></g>
+            <g class="node rl"><rect x="600" y="150" width="115" height="52" rx="7"></rect>
+              <text class="t-name" x="657" y="172" text-anchor="middle">rl.masking</text>
+              <text class="t-sub" x="657" y="190" text-anchor="middle">mask · coerce</text></g>
+            <g class="node rl"><rect x="725" y="150" width="120" height="52" rx="7"></rect>
+              <text class="t-name" x="785" y="172" text-anchor="middle">rl.driver</text>
+              <text class="t-sub" x="785" y="190" text-anchor="middle">advance_until_learner</text></g>
+            <g class="node rl"><rect x="855" y="150" width="125" height="52" rx="7"></rect>
+              <text class="t-name" x="917" y="172" text-anchor="middle">rl.selfplay</text>
+              <text class="t-sub" x="917" y="190" text-anchor="middle">OpponentPool</text></g>
+            <g class="node rl"><rect x="600" y="270" width="160" height="64" rx="7"></rect>
+              <text class="t-name" x="680" y="290" text-anchor="middle">rl.protocols</text>
+              <text class="t-sub" x="680" y="307" text-anchor="middle">TurnBasedGame</text>
+              <text class="t-sub" x="680" y="323" text-anchor="middle">ActionCodec · RewardFn</text></g>
+            <g class="node core"><rect x="790" y="420" width="190" height="52" rx="7"></rect>
+              <text class="t-name" x="885" y="442" text-anchor="middle">agent</text>
+              <text class="t-sub" x="885" y="460" text-anchor="middle">Agent[StateT, ActionT]</text></g>
+          </g>
+        </svg>
+      </div>
+      <figcaption>Every arrow comes from an <code>import</code> line on origin/main. The evaluation and RL columns share no edge. <code>Agent</code> is imported only by the RL modules: <code>benchmark</code> and <code>league</code> handle agent <em>names</em> and leave instantiation to the game's <code>play</code> callable. <code>benchmark</code> and <code>league.ratings</code> import through the <code>gamekit.mc</code> package, so loading either one loads every mc submodule. The arrows into <code>intervals</code> stand for <code>testing</code>, <code>sample_size</code>, <code>accumulate</code> and <code>sample</code> importing it; <code>stopping</code> and <code>variance</code> import <code>sample</code>, and <code>stopping</code> also imports <code>intervals</code> directly.</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="mods">
+    <h2 id="mods">What each module does</h2>
+    <div class="modules">
+      <div class="group core">
+        <h3>core · stdlib</h3>
+        <dl>
+          <dt>agent</dt><dd>The <code>Agent[StateT, ActionT]</code> Protocol: <code>name</code>, <code>choose_action</code>, <code>reset</code>. It is the only top-level re-export.</dd>
+          <dt>seats</dt><dd>BLAKE2b-seeded per-seat RNG (<code>seat_rng</code>, plus the frozen <code>seat_rng_legacy</code>), <code>rotate</code>, and <code>seat_occupancy_counts</code>.</dd>
+          <dt>results</dt><dd><code>stamp</code> adds the git commit and UTC timestamp to a payload; <code>write_result</code> writes it as JSON.</dd>
+        </dl>
+      </div>
+      <div class="group mc">
+        <h3>mc · stdlib</h3>
+        <dl>
+          <dt>mc.intervals</dt><dd><code>wilson_interval</code>, <code>ConfidenceInterval</code>, and <code>MCResult</code> with a normal CI.</dd>
+          <dt>mc.testing</dt><dd><code>two_proportion_test</code> (z, p) and <code>benjamini_hochberg</code>.</dd>
+          <dt>mc.sample_size</dt><dd>CLT, Hoeffding and two-proportion sample-size formulas.</dd>
+          <dt>mc.accumulate</dt><dd>The <code>Accumulator[V, S, R]</code> Protocol and <code>MeanAccumulator</code>.</dd>
+          <dt>mc.sample</dt><dd>The <code>Sampler</code> → <code>Evaluator</code> → <code>Accumulator</code> fold: <code>monte_carlo</code> and <code>monte_carlo_reduce</code>, with Welford state.</dd>
+          <dt>mc.stopping</dt><dd><code>monte_carlo_until</code> runs the fold in chunks until it reaches a target CI half-width or a hard cap.</dd>
+          <dt>mc.variance</dt><dd>Antithetic sampling, <code>paired_mean</code>, <code>control_variate</code> and <code>control_beta</code>.</dd>
+        </dl>
+      </div>
+      <div class="group eval">
+        <h3>evaluation · stdlib</h3>
+        <dl>
+          <dt>benchmark</dt><dd><code>run_arm</code> plays one role lineup with mandatory seat rotation and reports win rates by role and by seat with Wilson CIs, plus a two-proportion test. Also provides the <code>build_parser</code> CLI skeleton.</dd>
+          <dt>league.round_robin</dt><dd><code>run_league</code> calls <code>run_arm</code> once per pair. Results resume one pairing at a time, checked by config hash. <code>summarize_league</code> recomputes everything from disk.</dd>
+          <dt>league.ratings</dt><dd>A Bradley-Terry MLE (Hunter MM with a <code>prior_draws</code> prior), anchored onto the Elo scale, with bootstrap CIs, a win matrix and <code>find_cycles</code>.</dd>
+        </dl>
+      </div>
+      <div class="group rl">
+        <h3>rl · stdlib except env</h3>
+        <dl>
+          <dt>rl.protocols</dt><dd><code>TurnBasedGame</code>, <code>ActionCodec</code> and <code>RewardFn</code>: the seams a game adapts to.</dd>
+          <dt>rl.driver</dt><dd><code>advance_until_learner</code> steps every seat whose agent is not <code>None</code> until the learner must act.</dd>
+          <dt>rl.masking</dt><dd><code>legal_action_mask</code> (returns <code>list[bool]</code>) and <code>coerce_to_legal</code> (an illegal index becomes a random legal one).</dd>
+          <dt>rl.selfplay</dt><dd><code>OpponentPool</code> globs a run-scoped checkpoint directory and mixes in a baseline agent.</dd>
+          <dt>rl.env</dt><dd><code>SingleAgentEnv</code> is a gymnasium env for flat, masked-<code>Discrete</code> games. It is the only module that needs gymnasium and numpy.</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="contracts">
+    <h2 id="contracts">What a game implements to plug in</h2>
+    <p class="lede">All of these are structural. A game satisfies them with its own classes or closures and never subclasses a gamekit type.</p>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Contract</th><th>Members</th><th>Needed for</th></tr></thead>
+        <tbody>
+          <tr><td><code>Agent[StateT, ActionT]</code><br><span class="pill core">agent · runtime_checkable</span></td>
+            <td><code>name: str</code><span class="sig">choose_action(state, legal_actions, player_idx) → ActionT</span><span class="sig">reset() → None</span></td>
+            <td>Opponents in RL (<code>driver</code>, <code>OpponentPool</code>, <code>SingleAgentEnv</code>). Both games re-export it from <code>agents/base.py</code>.</td></tr>
+          <tr><td><code>TurnBasedGame[StateT, ActionT]</code><br><span class="pill rl">rl.protocols · not runtime_checkable</span></td>
+            <td><span class="sig">reset(seed) → StateT</span><span class="sig">legal_actions(state) → list[ActionT]</span><span class="sig">apply_action(state, action) → StateT (may mutate)</span><span class="sig">is_terminal(state) → bool</span><span class="sig">acting_player(state) → int</span></td>
+            <td>Any RL use. <code>acting_player</code> is the seat that must decide now, which is not always the turn player (for example catan's discards and trade replies).</td></tr>
+          <tr><td><code>ActionCodec[ActionT]</code><br><span class="pill rl">rl.protocols · runtime_checkable</span></td>
+            <td><code>n_actions: int</code><span class="sig">to_index(action) → int</span><span class="sig">from_index(index) → ActionT</span></td>
+            <td><code>SingleAgentEnv</code> and <code>legal_action_mask</code>, flat action spaces only.</td></tr>
+          <tr><td><code>RewardFn[StateT]</code><br><span class="pill rl">rl.protocols · runtime_checkable</span></td>
+            <td><span class="sig">compute(state, seat, done) → float</span><span class="sig">on_episode_start(state, seat) → None</span></td>
+            <td><code>SingleAgentEnv</code>. catan's <code>CatanEnv</code> uses it too.</td></tr>
+          <tr><td>Env callables</td>
+            <td><span class="sig">encode(state, seat) → NDArray[float32]</span><span class="sig">observation_space: spaces.Box · num_seats</span></td>
+            <td>Constructor arguments to <code>SingleAgentEnv</code>.</td></tr>
+          <tr><td>Self-play callables</td>
+            <td><span class="sig">load_opponent(path) → Agent</span><span class="sig">baseline_factory() → Agent</span></td>
+            <td><code>OpponentPool</code>. gamekit never imports a training framework.</td></tr>
+          <tr><td>Benchmark callables</td>
+            <td><span class="sig">play(Sequence[(engine_seed, driver_seed)]) → Sequence[R]</span><span class="sig">winning_seat(R) → int | None</span><span class="sig">rotation_offset(engine_seed) → int (optional)</span></td>
+            <td><code>run_arm</code>. <code>R</code> is the game's own result type and never enters gamekit.</td></tr>
+          <tr><td>League callables</td>
+            <td><span class="sig">play(Sequence[ScheduledGame]) → Sequence[R]</span><span class="sig">winning_seat(R) → int | None</span></td>
+            <td><code>run_league</code>. Agent names are the identity and must not contain <code>/</code> or <code>__vs__</code>.</td></tr>
+          <tr><td><code>Accumulator[V, S, R]</code>, <code>Sampler[T]</code>, <code>Evaluator[T, V]</code><br><span class="pill mc">mc</span></td>
+            <td><span class="sig">Sampler = Callable[[int], Iterable[T]]</span><span class="sig">Evaluator = Callable[[T], V]</span></td>
+            <td>Monte Carlo estimates. Optional; neither consumer uses them on origin/main.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="flow-a">
+    <h2 id="flow-a">Data flow A: benchmark and league</h2>
+    <div class="flow">
+      <div class="step game"><span class="k">game supplies</span><h3>Names + callables</h3><p>Agent or role names, <code>num_seats</code>, a <code>play</code> callable and a <code>winning_seat</code> accessor.</p></div>
+      <div class="step eval"><span class="k">league.round_robin</span><h3>Schedule pairings</h3><p>For each sorted pair <code>(a, b)</code>, the lineup is <code>(a, b, a, b, …)</code>; odd seat counts raise. Seeds come from a BLAKE2b hash of <code>(seed, a, b)</code>, so adding an agent leaves existing pairings unchanged. Pairings already on disk with a matching config hash are skipped.</p></div>
+      <div class="step eval"><span class="k">benchmark.run_arm</span><h3>Seeds + rotation</h3><p><code>n_games</code> consecutive <code>(engine_seed, driver_seed)</code> pairs, with the lineup rotated by <code>rotation_offset(engine_seed) % k</code>. <code>n_games</code> must be a multiple of <code>k</code>.</p></div>
+      <div class="step game"><span class="k">game plays</span><h3>Seeded games</h3><p>From <code>run_arm</code>, <code>play</code> gets only seed pairs and recomputes the rotation with <code>seats.rotate</code>. From <code>run_league</code>, it gets <code>ScheduledGame</code>s with the lineup already rotated.</p></div>
+      <div class="step mc"><span class="k">benchmark → mc</span><h3>Win rates + CIs</h3><p>Results go through <code>winning_seat</code>, then into <code>by_role</code> and <code>by_seat</code> with Wilson CIs. A two-proportion z-test runs when there are 2 roles. <span style="color:var(--warn)">A post-check raises <code>ValueError</code> if seat occupancy is unbalanced.</span> The payload is <code>stamp</code>ed.</p></div>
+      <div class="step eval"><span class="k">league.ratings</span><h3>Ratings + matrix</h3><p>Each pairing is written to <code>.partial</code>, then moved into place with <code>os.replace</code>. Then: Bradley-Terry fit → Elo anchored on one agent → bootstrap CIs → <code>win_matrix</code> (Wilson CI and residual against BT) → <code>find_cycles</code>. Output goes to <code>league.json</code>.</p></div>
+    </div>
+    <p class="note"><strong>Ties</strong> (where <code>winning_seat</code> returns <code>None</code>) are left out of the rating fit and reported per pairing. The "Elo" values are a batch Bradley-Terry MLE expressed on the Elo scale, not online Elo updates. <code>summarize_league</code> needs only the stored pairings, so you can refit with a different anchor or prior without replaying any games.</p>
+  </section>
+
+  <section aria-labelledby="flow-b">
+    <h2 id="flow-b">Data flow B: RL self-play</h2>
+    <div class="flow">
+      <div class="step game"><span class="k">game supplies</span><h3>Adapter + codec</h3><p>A <code>TurnBasedGame</code> adapter, an <code>ActionCodec</code>, <code>encode</code>, a <code>RewardFn</code> and an observation space.</p></div>
+      <div class="step rl"><span class="k">SingleAgentEnv.reset</span><h3>Seat the episode</h3><p>Reseed, then pick the learner's seat. Fill the other seats from <code>OpponentPool.seat_agents</code> (or a fixed list) and call <code>reset()</code> on each agent. Deal with <code>game.reset(seed)</code>, call <code>on_episode_start</code>, and advance. A game that ends before the learner acts is re-dealt. This draw order is part of the contract.</p></div>
+      <div class="step rl"><span class="k">step(action)</span><h3>Masked move</h3><p><code>legal_action_mask</code> builds the mask. An illegal index is coerced to a legal one (or raises). Then <code>codec.from_index</code> → <code>apply_action</code> → <code>advance_until_learner</code> → <code>reward.compute</code>. <code>action_masks()</code> exposes the mask to sb3-contrib.</p></div>
+      <div class="step game outside"><span class="k">caller's trainer · outside gamekit</span><h3>Write checkpoints</h3><p>The trainer (sb3-contrib in truco-py) saves models to <code>pool.checkpoint_dir</code>, which is <code>directory/run_id</code>.</p></div>
+      <div class="step rl"><span class="k">rl.selfplay</span><h3>Resample opponents</h3><p><code>OpponentPool.sample</code> re-globs the directory. With probability <code>1 − baseline_mix</code> (default 0.2 mix) it returns <code>load_opponent(path)</code>; otherwise <code>baseline_factory()</code>. With no checkpoints yet it always returns the baseline. The result feeds the next <code>reset</code>.</p></div>
+    </div>
+    <p class="note"><strong>The loop closes outside the library.</strong> gamekit only reads checkpoint paths and calls the loader you inject. It never imports torch or stable-baselines3. Games with spatial or variable action spaces skip <code>SingleAgentEnv</code> and build their own <code>gym.Env</code> from <code>protocols</code>, <code>driver</code> and <code>selfplay</code>.</p>
+  </section>
+
+  <section aria-labelledby="hooks">
+    <h2 id="hooks">Where the games hook in</h2>
+    <div class="consumers">
+      <div class="card">
+        <h3>truco-py</h3>
+        <div class="dep">depends on gamekit[rl] · 6 players, 2 teams</div>
+        <ul>
+          <li><code>agents/base.py</code> re-exports <code>Agent</code>.</li>
+          <li><code>training/env.py</code>: <code>TrucoEnv</code> <strong>subclasses</strong> <code>SingleAgentEnv</code>, with <code>_GameAdapter</code> (<code>TurnBasedGame</code>) and <code>_ActionCodec</code>. It overrides <code>on_episode_start</code> to compute an MC win-probability estimate.</li>
+          <li><code>training/pool.py</code>: <code>TeamOpponentPool</code> subclasses <code>OpponentPool</code> to sample opponents per team.</li>
+          <li><code>scripts/benchmark.py</code>, <code>training/eval.py</code>: <code>run_arm</code> with <code>num_seats=2</code> (one seat per team), plus <code>rotate</code>.</li>
+          <li><code>scripts/league_010.py</code>: <code>run_league</code> and <code>summarize_league</code>.</li>
+          <li><code>engine/truco.py</code>, <code>experimentos/*</code>, <code>scripts/analyze_009.py</code>: <code>wilson_interval</code>, <code>two_proportion_test</code>, <code>benjamini_hochberg</code>.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>catan</h3>
+        <div class="dep">depends on gamekit · gamekit[rl] via its own [rl] extra</div>
+        <ul>
+          <li><code>agents/base.py</code> re-exports <code>Agent</code>.</li>
+          <li><code>rl/env.py</code>: <code>CatanEnv</code> is its <strong>own</strong> <code>gym.Env</code>, not a <code>SingleAgentEnv</code>. It uses <code>advance_until_learner</code>, <code>coerce_to_legal</code>, <code>RewardFn</code> and <code>OpponentPool</code>, and adds a composition buffer for its multi-part actions. It does not use <code>ActionCodec</code>.</li>
+          <li><code>rl/adapter.py</code>: <code>CatanTurnBasedGame</code> satisfies <code>TurnBasedGame</code> structurally and imports nothing from gamekit.</li>
+          <li><code>experiments/benchmark.py</code>: <code>run_arm</code>, <code>rotate</code>, <code>seat_rng</code>. <code>critic_calibration.py</code>: <code>run_arm</code>.</li>
+          <li><code>experiments/league_013.py</code>: <code>run_league</code>, <code>pairing_seeds</code>, <code>seat_rng</code>.</li>
+          <li><code>server/bots.py</code>: <code>seat_rng</code>. Experiments and <code>rl/evaluate.py</code>: <code>wilson_interval</code>, <code>stamp</code>, <code>write_result</code>.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="notes">
+    <h2 id="notes">Things the code says that the layering hides</h2>
+    <ul class="surprises">
+      <li>Evaluation and RL are siblings, not layers. RL imports nothing from <code>mc</code>, <code>benchmark</code> or <code>league</code>, and evaluation never imports <code>Agent</code>.</li>
+      <li><code>seats.seat_rng</code> is not called anywhere inside gamekit. It exists for games (catan uses it in its benchmark, league and server bots).</li>
+      <li>Neither consumer uses the MC fold (<code>monte_carlo*</code>, <code>stopping</code>, <code>variance</code>) on origin/main. The only mc names they import are <code>wilson_interval</code>, <code>two_proportion_test</code> and <code>benjamini_hochberg</code>.</li>
+      <li><code>mc.testing</code>, <code>mc.sample_size</code> and <code>mc.stopping</code> import private names (<code>_NORMAL</code>, <code>_z_score</code>, <code>_drawn</code>) across modules.</li>
+      <li><code>TurnBasedGame</code> is the only Protocol without <code>@runtime_checkable</code>.</li>
+    </ul>
+  </section>
+
+  <footer>Built from <code>guidodinello/gamekit</code> origin/main (v0.3.0), with consumer imports read from truco-py and catan origin/main on 2026-10-07.</footer>
+</div>
+</body>
+</html>

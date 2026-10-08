@@ -57,6 +57,86 @@ history.
   objects; an encoder; a reward callable; and, for self-play, a
   checkpoint-loading callable.
 
+## Architecture
+
+Solid arrows come from the `import` statements in `src/gamekit`: A → B means A
+uses symbols defined in B. (`benchmark` and `league.ratings` import them through
+the `gamekit.mc` package.) Dotted arrows show what a game supplies. Every module
+except `rl.env` is stdlib-only. `benchmark` and `league` never import `Agent`:
+they work with agent *names* and a game-supplied `play` callable.
+
+```mermaid
+flowchart TB
+    subgraph CORE["core (stdlib)"]
+        agent["agent<br/>Agent[StateT, ActionT]"]
+        seats["seats<br/>rotate · seat_rng · seat_occupancy_counts"]
+        results["results<br/>stamp · write_result · git_commit"]
+    end
+
+    subgraph MC["mc (stdlib)"]
+        intervals["mc.intervals<br/>wilson_interval · MCResult · ConfidenceInterval"]
+        testing["mc.testing<br/>two_proportion_test · benjamini_hochberg"]
+        sizes["mc.sample_size"]
+        fold["mc.sample · accumulate · stopping · variance<br/>Sampler → Evaluator → Accumulator fold"]
+    end
+
+    subgraph EVAL["evaluation (stdlib)"]
+        benchmark["benchmark<br/>run_arm · build_parser"]
+        roundrobin["league.round_robin<br/>run_league · ScheduledGame"]
+        ratings["league.ratings<br/>fit_bradley_terry · elo_ratings · win_matrix"]
+    end
+
+    subgraph RL["rl"]
+        protocols["rl.protocols<br/>TurnBasedGame · ActionCodec · RewardFn"]
+        driver["rl.driver<br/>advance_until_learner"]
+        masking["rl.masking<br/>legal_action_mask · coerce_to_legal"]
+        selfplay["rl.selfplay<br/>OpponentPool"]
+        env["rl.env<br/>SingleAgentEnv"]
+    end
+
+    gym[("gymnasium + numpy<br/>[rl] extra")]
+    game(["game repo<br/>truco-py · catan"])
+
+    testing --> intervals
+    sizes --> intervals
+    fold --> intervals
+    benchmark --> testing
+    benchmark --> intervals
+    benchmark --> results
+    benchmark --> seats
+    roundrobin --> benchmark
+    roundrobin --> ratings
+    roundrobin --> results
+    roundrobin --> seats
+    ratings --> intervals
+    driver --> agent
+    driver --> protocols
+    masking --> protocols
+    selfplay --> agent
+    env --> driver
+    env --> masking
+    env --> selfplay
+    env --> protocols
+    env --> agent
+    env --> gym
+
+    game -. "play(seeds) + winning_seat" .-> benchmark
+    game -. "play(ScheduledGame[]) + winning_seat" .-> roundrobin
+    game -. "TurnBasedGame adapter, codec, encoder, RewardFn" .-> env
+    game -. "load_opponent(path), baseline_factory" .-> selfplay
+```
+
+The `mc.sample · accumulate · stopping · variance` node is collapsed for
+readability. Inside it, `sample` imports `accumulate`; `stopping` and `variance`
+import `sample`; and `stopping`, `sample` and `accumulate` each import
+`mc.intervals` directly.
+
+A detailed version (module index, what a game implements, data flows) is in
+[`docs/architecture.html`](docs/architecture.html), the canonical copy. Open it
+in a browser from a clone, since GitHub shows HTML as source. A rendered copy is
+also at <https://claude.ai/artifact/Gz3HUTZNnrnqZXwZGUwT7E>; it is private
+unless shared and may lag the in-repo file.
+
 ## Scope
 
 Core is stdlib + nothing else — no runtime dependencies, including
