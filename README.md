@@ -177,3 +177,9 @@ uv run pytest
 Hypotheses, technique notes, and paper citations live in
 [`docs/research/`](docs/research/README.md); per-game experiment logs live
 in the consumer repos.
+
+## Roadmap
+
+Planned work is indexed in the pinned
+[Roadmap issue](https://github.com/guidodinello/gamekit/issues/59), which
+orders open issues as Now / Next / Later and groups them by theme.
