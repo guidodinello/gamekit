@@ -175,6 +175,23 @@ uv run mypy src tests
 uv run pytest
 ```
 
+## Releasing
+
+Versions follow [SemVer](https://semver.org); `CHANGELOG.md` is curated by hand and is
+the source of the release notes.
+
+1. Open a `chore(release): vX.Y.Z` PR: bump `version` in `pyproject.toml`, move
+   `[Unreleased]` under a new `## [X.Y.Z] - YYYY-MM-DD` section, and update the compare
+   links at the bottom.
+2. Squash-merge it.
+3. Tag the merge commit with an **annotated** tag and push it:
+   `git tag -a vX.Y.Z -m vX.Y.Z <merge-sha> && git push origin vX.Y.Z`.
+
+The `Release` workflow then verifies the tag matches the version and is on `main`,
+builds the wheel and sdist, and creates the GitHub Release with that changelog section
+as notes. If verification fails nothing is published: fix it, delete the tag
+(`git push origin :refs/tags/vX.Y.Z`), and re-tag.
+
 ## Research
 
 Hypotheses, technique notes, and paper citations live in
