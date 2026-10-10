@@ -81,7 +81,7 @@ class SingleAgentEnv[StateT, ActionT](gym.Env[NDArray[np.float32], np.int64]):
         codec: ActionCodec[ActionT],
         encode: Callable[[StateT, int], NDArray[np.float32]],
         reward: RewardFn[StateT],
-        observation_space: spaces.Box,
+        observation_space: spaces.Box[np.float32],
         num_seats: int,
         agents: Sequence[Agent[StateT, ActionT]] | None = None,
         opponent_pool: OpponentPool[StateT, ActionT] | None = None,
