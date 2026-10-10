@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that version's section of this file as the notes, and attaches the wheel and
   sdist built by `uv build`. See README `Releasing`.
 
+### Changed
+- `.github/workflows/release.yml`: its actions are now pinned to commit SHAs and
+  checkout no longer persists the token, as the release job holds `contents: write`.
+
 ## [0.4.0] - 2026-10-10
 
 ### Added
