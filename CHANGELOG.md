@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `.github/workflows/release.yml`: pushing a `vX.Y.Z` tag now creates the GitHub
+  Release. It checks the tag against `pyproject.toml`'s version and `main`, uses
+  that version's section of this file as the notes, and attaches the wheel and
+  sdist built by `uv build`. See README `Releasing`.
+
 ## [0.4.0] - 2026-10-10
 
 ### Added
