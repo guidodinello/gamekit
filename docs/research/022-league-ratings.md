@@ -1,7 +1,7 @@
 # 022 — League ratings: anchored Bradley-Terry/Elo over a round-robin, with the win matrix alongside
 
 **Status:** running
-**Last touched:** 2026-10-07
+**Last touched:** 2026-10-10
 
 ## Hypothesis
 
@@ -183,7 +183,7 @@ module is `gamekit.league`.
   the truth in at least 85% of 60 synthetic replications; a rock-paper-scissors
   matrix gives equal ratings and one detected cycle; a resumed run equals an
   uninterrupted one; identical agents in a 4-seat game rate equal.
-- **Gate for the first uses (pending):** truco — a league over the 008 checkpoints plus
+- **Gate for the first uses (done; see Result):** truco — a league over the 008 checkpoints plus
   Random and Threshold anchors, **after** the engine fixes, run overnight on the
   homelab HP; catan — rank `catan_bc_ft_long`, `rl_search` (catan log 011),
   `Heuristic` and `TradingHeuristic`. State the roster and the anchor with every result.
@@ -258,10 +258,77 @@ against its `league.json`, except where a bullet names another source.
   `league.json` with a plain write, last writer wins, and the content is a 2-agent
   summary. The in-run copy was discarded and `league.json` regenerated from the 36
   pairing files. Pairing files were not affected.
-- **Not exercised yet:** the N>2 seat reduction (catan), ties, and the prior at small n.
+- **Not exercised yet:** the N>2 seat reduction (catan), ties, and the prior at small n. (Superseded for the seat reduction by catan log 013 below; ties and the small-n prior were still not exercised there.)
 - **Next:** the catan first use. A run-pairing API plus an atomic `league.json`
   write would remove the workaround:
   [gamekit#47](https://github.com/guidodinello/gamekit/issues/47).
+
+**Catan first use, catan log 013 (2026-10-10):** the N>2 seat reduction, the other
+first use. catan log
+[013](https://github.com/guidodinello/catan/blob/main/docs/experiments/013-first-league.md)
+([results PR #65](https://github.com/guidodinello/catan/pull/65), pre-registration
+[#52](https://github.com/guidodinello/catan/pull/52); same driver as truco log
+[010](https://github.com/guidodinello/truco-py/blob/main/docs/experiments/010-league-009-checkpoints.md))
+ran `gamekit.league` at gamekit `05f271e` with **11 agents** (8 RL checkpoints: bc_clone,
+bc_ft_2m, long_4m / long_8m / long_10m, and the three log 010 runs ent_ctrl / ent_ramp /
+ent_decay; plus heuristic, trading_heuristic, random), 55 pairings, **n=4000 each (220,000
+games)**, `num_seats=4`, lineup `(a, b, a, b)`, `prior_draws=1`, 1000 bootstrap
+resamples, anchor **heuristic = 0**. Departures from the plan above: no `rl_search` agent
+(too slow for the HP), and the roster is wider than the four agents the issue named.
+Descriptive: log 013 pre-registered that no verdict is scored for this note, so none is
+scored here. No external source; observed in the log, and the numbers below are from its
+`league.json` and pairing files.
+
+- **The 4-seat reduction ran end to end.** Every one of the 55 pairing files has 4000 games
+  and a distinct config hash, each agent occupied each seat 2000 times (only `abab` / `baba`
+  occur, so `aabb` seatings are not tested), and re-running `summarize` on the pairing files
+  reproduced `league.json` exactly. The reduction itself is still the Luce-model derivation
+  above, not a sourced result.
+- **Ratings (Elo, 95% bootstrap CI):** trading_heuristic +16.2 [+10.6, +21.2], heuristic 0
+  (anchor), long_10m -62.9 [-67.6, -57.8], long_8m -69.2 [-74.4, -64.2], ent_decay -89.9
+  [-95.0, -84.6], ent_ctrl -116.1 [-121.0, -111.2], long_4m -123.4 [-128.9, -118.4], ent_ramp
+  -132.3 [-137.6, -127.2], bc_clone -161.1 [-166.4, -156.1], bc_ft_2m -178.8 [-183.8,
+  -173.6], random -687.3 [-696.2, -676.6]. No RL checkpoint rates above the heuristic.
+  `heuristic` beats `long_10m` 59.8% in 2v2, which agrees in sign with the 1v3 benchmark
+  (long_10m 20.72% against 25% parity); the two numbers are on different scales, so only the
+  sign is compared.
+- **Ties: 0 of 220,000 games, so the tie path was not exercised in a run** (only in the CI test
+  of the all-ties case, where the pairing file is written and the fit then refuses a league
+  with no decisive game).
+- **The small-n prior was not exercised.** n=4000 per pairing; the closest cell is random vs
+  trading_heuristic (2 wins in 4000), and `prior_draws=1` is negligible there.
+- **Bradley-Terry fits the RL block poorly.** gamekit reports **5 significant 3-cycles, all
+  through long_10m** (for example ent_ctrl > long_10m > long_8m > ent_ctrl). The largest
+  residual is long_10m vs long_8m: **66.7% observed against 50.9% fitted** (+0.158); next,
+  long_10m vs ent_ramp (48.4% against 59.9%) and vs ent_ctrl (47.3% against 57.6%). long_10m
+  beats the log 006 line (long_4m, long_8m) and the bc_* checkpoints by more than one scalar
+  per agent predicts, and does worse against the log 010 runs. As in truco 010, the
+  win matrix shows what the rating hides; the single rating is an adequate summary against
+  the baselines and a poor one inside the RL block.
+- **Seat rule caveat.** RL seats always reject trade offers, so trading_heuristic's +16 is
+  not trade skill against a trading opponent, and two trading_heuristic copies can trade
+  with each other, which breaks the no-cooperation premise above in its cells. Per log 013
+  this is a bias of the roster, not of the module.
+- **Reproducibility, partial.** The cross-machine check (3 pairings, n=200, laptop torch
+  cu128 vs HP CPU torch) matched on the per-game winner hashes in all three; the laptop's
+  record-digest hashes for two pairings and its `config_hash` files were lost in a reboot
+  (outputs were in `/tmp`), so the pre-registered criterion was only partly checked. The
+  league's own stamps (config hash, wins + ties = n, seat occupancy) were re-derived from
+  the files.
+- **Cost, per the log:** 46.5 h on the HP with 3 workers (1.29x the 35.9 h smoke estimate,
+  which was based on n=8 per pairing): about 64 min per RL-vs-RL pairing (28 of them), 40
+  min per RL-vs-baseline (24), 14 min per baseline-vs-baseline (3).
+- **What the API did well / where it was awkward.** Resumability by pairing and
+  roster-independent seeds and hashes worked as in truco 010. Instead of truco's
+  one-`run_league`-per-pairing pool (whose `league.json` writes race), catan ran one serial
+  `run_league` whose `play` callback fans each pairing's games out to a persistent
+  3-worker pool: no race, a correct `league.json` from the run itself, and a barrier at the
+  end of each pairing that was negligible at n=4000. That workaround is still a workaround
+  for [gamekit#47](https://github.com/guidodinello/gamekit/issues/47) (a public `run_pairing`
+  and an atomic `league.json` write), which stays open.
+- **Next:** a trading RL agent (catan #28) before trade skill can sit on this scale; a
+  rank-based Plackett-Luce reduction for 4 seats, given how the single scale fits the RL
+  block, remains the future work named above. Both first uses are now recorded.
 
 ## Related notes
 
