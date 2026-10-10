@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-10
+
 ### Added
 - `gamekit.league`: a round-robin league with anchored ratings. `run_league`
   plays every pairing of named agents through `gamekit.benchmark.run_arm`
@@ -24,20 +26,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (#38).
 - `docs/research/`: a git-tracked logbook of game-agnostic technique notes
   (hypothesis, citations, how to test, result), with a note template and an
-  experiment-log template for consumer repos (#26, #27, #28).
+  experiment-log template for consumer repos (#26, #27, #28). It now holds
+  notes 001-023.
+- README `Architecture` section and `docs/architecture.html`, a detailed page
+  with the module index, what a game implements, and the data flows (#50).
 - `tach.toml` and a blocking `Module Boundaries (Python)` CI job (plus a
   pre-commit hook) enforcing the import graph in the README's Architecture
   section; ruff's `TID251` now bans importing `numpy`/`gymnasium` outside
   `gamekit.rl.env` (#56).
 
 ### Changed
+- **Typing change for consumers:** `SingleAgentEnv`'s `observation_space`
+  parameter is now typed `spaces.Box[np.float32]` (it was an unparameterized
+  `spaces.Box`), following gymnasium 1.4. There is no runtime change, but a
+  type-checked consumer that passes an unparameterized or non-float32 `Box`
+  may now get a mypy error; build the space with `dtype=np.float32` or
+  annotate it as `Box[np.float32]` (#65).
+- The `rl` extra now requires `gymnasium>=1.4.0` (was `>=1.3.0`) (#65).
+- Dev tooling: ruff 0.16.10, mypy 2.4.0, and `uv.lock` resynced with
+  `pyproject.toml` (#43, #44, #45, #64, #65).
 - CI jobs pick their runner from the `CI_RUNNERS` repository variable,
   falling back to `ubuntu-latest` when unset (#25).
 - CI hardening (#57): a `Packaging (wheel)` job installs the built wheel into
   clean venvs and asserts the core imports without numpy/gymnasium; every job
   syncs with `uv sync --locked`; `pre-commit` and `actionlint` run as jobs;
   superseded PR runs are cancelled; and an aggregate `CI` job gives the branch
-  ruleset one stable check to require. Dependabot now uses the `uv` ecosystem
+  ruleset one stable check to require; the `main` ruleset now requires only
+  that `CI` check. Dependabot now uses the `uv` ecosystem
   so it keeps `uv.lock` in step with `pyproject.toml`.
 
 ## [0.3.0] - 2026-09-20
@@ -115,3 +130,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Project scaffolded
+
+[Unreleased]: https://github.com/guidodinello/gamekit/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/guidodinello/gamekit/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/guidodinello/gamekit/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/guidodinello/gamekit/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/guidodinello/gamekit/releases/tag/v0.1.0
