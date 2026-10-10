@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/research/`: a git-tracked logbook of game-agnostic technique notes
   (hypothesis, citations, how to test, result), with a note template and an
   experiment-log template for consumer repos (#26, #27, #28).
+- `tach.toml` and a blocking `Module Boundaries (Python)` CI job (plus a
+  pre-commit hook) enforcing the import graph in the README's Architecture
+  section; ruff's `TID251` now bans importing `numpy`/`gymnasium` outside
+  `gamekit.rl.env` (#56).
 
 ### Changed
 - CI jobs pick their runner from the `CI_RUNNERS` repository variable,
