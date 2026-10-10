@@ -1,7 +1,7 @@
 # Baseline CI for a small/single-package Python repo — mirrors the pre-commit
-# baseline (templates/pre-commit/python.yaml) as a required gate, since
-# pre-commit itself only runs locally and CI is the only place a required
-# check can actually enforce it. Lint + test + typecheck: no path filtering
+# baseline (templates/pre-commit/python.yaml) as a required gate. The
+# `pre-commit` job runs the whole config on every PR, so hooks are enforced
+# even for contributors who never ran `pre-commit install`. Lint + test + typecheck: no path filtering
 # (add dorny/paths-filter once this repo is a monorepo with independent
 # subprojects — not needed for a single package).
 #
@@ -11,14 +11,11 @@
 # regression on either supported interpreter, not just whichever one a
 # contributor happens to run locally.
 #
-# Adopt: cp to .github/workflows/ci.yml, fill in the two <FIXME> spots,
-# then add "Lint Python" and "Tests (Python)" as required_status_checks
-# contexts for this repo in github-standard.json.
-#
-# gamekit-specific: Tests (Python) below runs a 3.13/3.14 matrix (the
-# declared requires-python floor), so its actual check contexts are
-# per-leg (e.g. "Tests (Python) (3.13)") -- read the real names off the
-# first CI run before pasting anything into required_status_checks.
+# gamekit-specific: require only the aggregate `CI` job below in the branch
+# ruleset. Matrix legs have per-leg check contexts (e.g. "Tests (Python)
+# (3.13)") that silently stop gating if a matrix or job is renamed; `CI` is
+# stable and fails if any job it needs fails or is cancelled, so new jobs
+# only need adding to its `needs:` list.
 #
 # gamekit-specific: RL extra below is a separate job, not an `extras` axis
 # on Tests (Python) -- a matrix dimension renames every leg's check context
@@ -51,6 +48,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Superseded pull_request runs are cancelled. Every other event (push to main,
+# workflow_dispatch) gets a unique group, so it is never cancelled or replaced
+# by a newer pending run -- GitHub drops a pending run in the same group even
+# with cancel-in-progress false, which could leave a main commit with no CI.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 # Default GITHUB_TOKEN scope for every job below — neither lints nor tests
 # writes anything (no comments, no pushes, no packages). Least privilege.
 permissions:
@@ -75,7 +80,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --locked --dev
 
       - name: ruff format check
         run: uv run ruff format --check .
@@ -95,7 +100,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --locked --dev
 
       # Blocking from day one (gamekit#56): 0 violations at rollout, and the
       # check is deterministic. tach.toml encodes the README's import graph.
@@ -121,7 +126,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --dev --python ${{ matrix.python-version }}
+        run: uv sync --locked --dev --python ${{ matrix.python-version }}
 
       - name: Run tests
         run: uv run pytest
@@ -146,7 +151,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --dev --python ${{ matrix.python-version }}
+        run: uv sync --locked --dev --python ${{ matrix.python-version }}
 
       - name: mypy
         run: uv run mypy src tests
@@ -170,10 +175,123 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies (with the [rl] extra)
-        run: uv sync --dev --extra rl --python ${{ matrix.python-version }}
+        run: uv sync --locked --dev --extra rl --python ${{ matrix.python-version }}
 
       - name: Run tests
         run: uv run pytest
 
       - name: mypy (with real gymnasium/numpy types)
         run: uv run mypy src tests
+
+  packaging:
+    name: Packaging (wheel)
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS || '["ubuntu-latest"]') }}
+    # `uv sync` installs the project editable with dev deps, so a numpy import
+    # added to the core would pass every other job. This one installs the
+    # *built wheel* into clean venvs and checks what actually ships (the
+    # install-side counterpart of ruff's TID251 ban, gamekit#56/#57).
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+
+      - name: Build wheel
+        run: uv build --wheel
+
+      # cwd is moved out of the checkout and python runs with -I so src/
+      # cannot shadow the installed wheel (the script also asserts this).
+      - name: Core imports without extras
+        run: |
+          wheels=(dist/*.whl)
+          wheel="$PWD/${wheels[0]}"
+          script="$PWD/.github/scripts/check_wheel_imports.py"
+          uv venv "$RUNNER_TEMP/core-venv" --python 3.13
+          uv pip install --python "$RUNNER_TEMP/core-venv" "$wheel"
+          cd "$RUNNER_TEMP"
+          core-venv/bin/python -I "$script"
+
+      # numpy is importable here, so a guarded `try: import numpy` in a core
+      # module is caught too, not just an unguarded one.
+      - name: Core stays numpy-free, rl.env imports with [rl]
+        run: |
+          wheels=(dist/*.whl)
+          wheel="$PWD/${wheels[0]}"
+          script="$PWD/.github/scripts/check_wheel_imports.py"
+          uv venv "$RUNNER_TEMP/rl-venv" --python 3.13
+          uv pip install --python "$RUNNER_TEMP/rl-venv" "gamekit[rl] @ file://$wheel"
+          cd "$RUNNER_TEMP"
+          rl-venv/bin/python -I "$script" --rl
+
+  pre-commit:
+    name: pre-commit
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS || '["ubuntu-latest"]') }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # debug-statements pins language_version python3.13; ubuntu-latest's
+      # system python is older.
+      - uses: actions/setup-python@v7
+        id: py
+        with:
+          python-version: "3.13"
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+
+      # pre-commit comes from the locked dev group; the local tach hook
+      # (`uv run tach check`) needs the same synced environment.
+      - name: Install dependencies
+        run: uv sync --locked --dev
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ steps.py.outputs.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: pre-commit
+        run: uv run --locked pre-commit run --all-files --show-diff-on-failure
+
+  lint-workflows:
+    name: Lint Workflows
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS || '["ubuntu-latest"]') }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: actionlint
+        uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -color
+
+  # Single stable check name for the branch ruleset (see header comment).
+  ci:
+    name: CI
+    needs:
+      - lint-python
+      - tach-check
+      - test-python
+      - typecheck-python
+      - rl-extra
+      - packaging
+      - pre-commit
+      - lint-workflows
+    if: always()
+    runs-on: ${{ fromJSON(vars.CI_RUNNERS || '["ubuntu-latest"]') }}
+    steps:
+      - name: Check results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          read -ra results <<< "$RESULTS"
+          for r in "${results[@]}"; do
+            if [[ "$r" == "failure" || "$r" == "cancelled" ]]; then
+              echo "A required job finished as: $r"
+              exit 1
+            fi
+          done

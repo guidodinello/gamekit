@@ -33,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - CI jobs pick their runner from the `CI_RUNNERS` repository variable,
   falling back to `ubuntu-latest` when unset (#25).
+- CI hardening (#57): a `Packaging (wheel)` job installs the built wheel into
+  clean venvs and asserts the core imports without numpy/gymnasium; every job
+  syncs with `uv sync --locked`; `pre-commit` and `actionlint` run as jobs;
+  superseded PR runs are cancelled; and an aggregate `CI` job gives the branch
+  ruleset one stable check to require. Dependabot now uses the `uv` ecosystem
+  so it keeps `uv.lock` in step with `pyproject.toml`.
 
 ## [0.3.0] - 2026-09-20
 
