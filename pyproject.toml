@@ -31,7 +31,19 @@ line-length = 88
 extend-exclude = ["docs"]
 
 [tool.ruff.lint]
-select = ["E", "F", "B", "I", "N", "W", "UP"]
+select = ["E", "F", "B", "I", "N", "W", "UP", "TID"]
+
+# numpy/gymnasium arrive only with the [rl] extra and only gamekit.rl.env may
+# import them; anywhere else would break a plain `pip install gamekit`.
+# `tach check-external` cannot enforce this (no optional-dependencies, no
+# per-module scoping), so ruff's banned-api does (gamekit#56, #7).
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"numpy".msg = "numpy is only allowed in gamekit.rl.env ([rl] extra)"
+"gymnasium".msg = "gymnasium is only allowed in gamekit.rl.env ([rl] extra)"
+
+[tool.ruff.lint.per-file-ignores]
+"src/gamekit/rl/env.py" = ["TID251"]
+"tests/test_rl_env.py" = ["TID251"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["gamekit"]
@@ -68,4 +80,5 @@ dev = [
     "ruff>=0.16.9",
     "mypy>=2.3.1",
     "pytest>=9.1.1",
+    "tach>=0.35.3",
 ]

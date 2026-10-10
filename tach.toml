@@ -1,0 +1,99 @@
+# Tach module-boundary configuration for src/gamekit/.
+#
+# This file is the CI-enforced *encoding* of the import graph drawn in the
+# README's Architecture section (and docs/architecture.html, the canonical
+# copy; see #50). Solid arrows there are `depends_on` edges here. Change one
+# and the other together, or `tach check` fails.
+#
+# Wiring (#56): the `tach-check` job in .github/workflows/ci.yml runs
+# `uv run tach check` in blocking mode, and a local hook in
+# .pre-commit-config.yaml runs it too. The pre-commit hook is used instead of
+# `tach install`, which writes a raw git hook that would overwrite
+# pre-commit's own. It went straight to blocking: the graph had 0 violations
+# at rollout and the check is deterministic, so a report-only burn-in would
+# have proven nothing.
+#
+# Policy the graph encodes:
+#   - agent, seats, results and mc are leaves (they import nothing else here).
+#   - Evaluation (benchmark, league) never imports agent: it works with agent
+#     *names* and a game-supplied `play` callable.
+#   - rl imports only agent. Evaluation and rl are siblings: no edge either way.
+#
+# `exact = true`: a declared edge that no import uses is an error, so this
+# file cannot quietly grow more permissive than the code.
+# `forbid_circular_dependencies = true`: the graph is a DAG today; keep it so.
+#
+# Not covered here (see the issues): numpy/gymnasium staying inside rl.env is
+# enforced by ruff's TID251 in pyproject.toml, because `tach check-external`
+# cannot read optional-dependencies or scope a ban per module (#56).
+
+source_roots = ["src"]
+
+exclude = [
+    "**/__pycache__",
+    "**/tests",
+]
+
+exact = true
+forbid_circular_dependencies = true
+
+# ── Root package ────────────────────────────────────────────────────────────
+# gamekit/__init__.py re-exports Agent and nothing else. Declaring the root
+# explicitly (rather than a `*` catch-all) means a new top-level module that
+# someone forgets to declare below is still checked: importing it from a
+# declared module fails, instead of passing unchecked.
+
+[[modules]]
+path = "gamekit"
+depends_on = ["gamekit.agent"]
+
+# ── Core leaves (stdlib only) ───────────────────────────────────────────────
+
+[[modules]]
+path = "gamekit.agent"
+depends_on = []
+
+[[modules]]
+path = "gamekit.seats"
+depends_on = []
+
+[[modules]]
+path = "gamekit.results"
+depends_on = []
+
+# mc is a leaf package: it imports only itself. Its submodules import
+# underscore-private names from each other (_NORMAL, _z_score, _drawn; #51).
+# That is intra-module here, so tach does not see it and there is nothing to
+# allow. Enforcing a public surface would mean one [[modules]] per submodule
+# plus [[interfaces]]; that follows the #51 and #53 decisions.
+[[modules]]
+path = "gamekit.mc"
+depends_on = []
+
+# ── Evaluation (stdlib only) ────────────────────────────────────────────────
+
+# Never agent: it takes a game-supplied `play` callable and agent names.
+[[modules]]
+path = "gamekit.benchmark"
+depends_on = [
+    "gamekit.mc",
+    "gamekit.results",
+    "gamekit.seats",
+]
+
+# Sits on top of benchmark.run_arm. Never agent, for the same reason.
+[[modules]]
+path = "gamekit.league"
+depends_on = [
+    "gamekit.benchmark",
+    "gamekit.mc",
+    "gamekit.results",
+    "gamekit.seats",
+]
+
+# ── RL ──────────────────────────────────────────────────────────────────────
+
+# Only agent. A sibling of evaluation: no mc/benchmark/league/seats/results.
+[[modules]]
+path = "gamekit.rl"
+depends_on = ["gamekit.agent"]

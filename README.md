@@ -131,6 +131,9 @@ readability. Inside it, `sample` imports `accumulate`; `stopping` and `variance`
 import `sample`; and `stopping`, `sample` and `accumulate` each import
 `mc.intervals` directly.
 
+The package-level edges are enforced in CI by [`tach.toml`](tach.toml): an
+import that is not drawn here fails the `Module Boundaries (Python)` job.
+
 A detailed version (module index, what a game implements, data flows) is in
 [`docs/architecture.html`](docs/architecture.html), the canonical copy. Open it
 in a browser from a clone, since GitHub shows HTML as source. A rendered copy is

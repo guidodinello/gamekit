@@ -1,6 +1,5 @@
 # Baseline pre-commit config for a Python repo. Scoped down from a larger
-# project's config (module-boundary checks, security scanners, framework-
-# specific hooks) to the hygiene + formatting layer every Python repo wants
+# project's config (security scanners, framework-specific hooks) to the hygiene + formatting layer every Python repo wants
 # regardless of size — see docs/github-standard.md § CI/pre-commit baseline
 # for what's deliberately left out and why.
 #
@@ -43,3 +42,16 @@ repos:
         # not just waved through by the ignore_missing_imports override in
         # pyproject.toml (gamekit#7).
         additional_dependencies: ["pytest>=9.1.1", "gymnasium>=1.3.0", "numpy>=2.5.3"]
+
+  # Module boundaries (tach.toml, gamekit#56). A local hook, not `tach install`,
+  # which would overwrite pre-commit's own git hook. Runs at the default
+  # commit stage: tach takes well under a second, and a pre-push stage would
+  # never fire without default_install_hook_types.
+  - repo: local
+    hooks:
+      - id: tach-check
+        name: tach check (module boundaries)
+        entry: uv run tach check
+        language: system
+        types_or: [python, toml]
+        pass_filenames: false
