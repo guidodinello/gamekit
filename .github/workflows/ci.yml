@@ -255,7 +255,13 @@ jobs:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ steps.py.outputs.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
+      # mypy is skipped: its hook env floats gymnasium/numpy to the latest
+      # releases (`>=` in .pre-commit-config.yaml), which type-checks
+      # differently from the locked versions and already fails on rl/env.py.
+      # `Typecheck Python` and `RL extra` run mypy against uv.lock instead.
       - name: pre-commit
+        env:
+          SKIP: mypy
         run: uv run --locked pre-commit run --all-files --show-diff-on-failure
 
   lint-workflows:
