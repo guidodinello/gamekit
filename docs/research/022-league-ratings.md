@@ -1,6 +1,6 @@
 # 022 — League ratings: anchored Bradley-Terry/Elo over a round-robin, with the win matrix alongside
 
-**Status:** running
+**Status:** tested (descriptive; truco 010 and catan 013, no verdict)
 **Last touched:** 2026-10-10
 
 ## Hypothesis

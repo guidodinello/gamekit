@@ -80,5 +80,5 @@ sections are a floor, not a ceiling.
 | [019](019-human-catan-game-data.md) | Human Catan game data as a training source | idea | 2026-09-29 |
 | [020](020-modular-trade-agent.md) | Modular agent: separate trade module over a strategy policy | idea | 2026-09-30 |
 | [021](021-decision-time-search.md) | Decision-time search for Catan: ISMCTS with the trained policy/value network as priors | tested (upper bound; self-model confirmation pending) | 2026-10-02 |
-| [022](022-league-ratings.md) | League ratings: anchored Bradley-Terry/Elo over a round-robin, with the win matrix alongside | running (truco 010 and catan 013 done, descriptive) | 2026-10-10 |
+| [022](022-league-ratings.md) | League ratings: anchored Bradley-Terry/Elo over a round-robin, with the win matrix alongside | tested (descriptive; truco 010 and catan 013, no verdict) | 2026-10-10 |
 | [023](023-league-selfplay.md) | League self-play: PFSP opponent sampling from snapshots and fixed baselines | planned | 2026-10-07 |
