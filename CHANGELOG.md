@@ -8,12 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `gamekit.league.run_pairing(a, b, ...)`: the loop body of `run_league` (config
+  hash check, `run_arm`, atomic write) as a public function. It writes only the
+  pairing file, never `league.json`, and needs no anchor, so a consumer can play
+  pairings from its own process pool and call `summarize_league` once. It is
+  order-insensitive in `(a, b)` and writes the same file, seeds and hash as
+  `run_league`, so existing result directories keep resuming. `run_league` now
+  calls it (#47).
 - `.github/workflows/release.yml`: pushing a `vX.Y.Z` tag now creates the GitHub
   Release. It checks the tag against `pyproject.toml`'s version and `main`, uses
   that version's section of this file as the notes, and attaches the wheel and
   sdist built by `uv build`. See README `Releasing`.
 
 ### Changed
+- `gamekit.results.write_result` is now atomic: it writes a uniquely named temp
+  file in the same directory and `os.replace`s it into place, so concurrent
+  writers (e.g. parallel `run_league` calls writing `league.json`) cannot leave a
+  torn file. This applies to every caller, not only the league. The bytes written
+  are the same; `os.replace` replaces a symlink instead of writing through it,
+  and a new file gets the umask-default mode (#47).
 - `.github/workflows/release.yml`: its actions are now pinned to commit SHAs and
   checkout no longer persists the token, as the release job holds `contents: write`.
 

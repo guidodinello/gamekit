@@ -196,7 +196,7 @@ footer { font-size: 12.5px; color: var(--muted); }
             <!-- ===== nodes: evaluation ===== -->
             <g class="node eval"><rect x="40" y="30" width="240" height="52" rx="7"></rect>
               <text class="t-name" x="160" y="52" text-anchor="middle">league.round_robin</text>
-              <text class="t-sub" x="160" y="70" text-anchor="middle">run_league · ScheduledGame</text></g>
+              <text class="t-sub" x="160" y="70" text-anchor="middle">run_league · run_pairing · ScheduledGame</text></g>
             <g class="node eval"><rect x="300" y="30" width="260" height="52" rx="7"></rect>
               <text class="t-name" x="430" y="52" text-anchor="middle">league.ratings</text>
               <text class="t-sub" x="430" y="70" text-anchor="middle">Bradley-Terry · Elo · win_matrix</text></g>
@@ -262,7 +262,7 @@ footer { font-size: 12.5px; color: var(--muted); }
         <dl>
           <dt>agent</dt><dd>The <code>Agent[StateT, ActionT]</code> Protocol: <code>name</code>, <code>choose_action</code>, <code>reset</code>. It is the only top-level re-export.</dd>
           <dt>seats</dt><dd>BLAKE2b-seeded per-seat RNG (<code>seat_rng</code>, plus the frozen <code>seat_rng_legacy</code>), <code>rotate</code>, and <code>seat_occupancy_counts</code>.</dd>
-          <dt>results</dt><dd><code>stamp</code> adds the git commit and UTC timestamp to a payload; <code>write_result</code> writes it as JSON.</dd>
+          <dt>results</dt><dd><code>stamp</code> adds the git commit and UTC timestamp to a payload; <code>write_result</code> writes it as JSON, atomically (temp file, then <code>os.replace</code>).</dd>
         </dl>
       </div>
       <div class="group mc">
@@ -281,7 +281,7 @@ footer { font-size: 12.5px; color: var(--muted); }
         <h3>evaluation · stdlib</h3>
         <dl>
           <dt>benchmark</dt><dd><code>run_arm</code> plays one role lineup with mandatory seat rotation and reports win rates by role and by seat with Wilson CIs, plus a two-proportion test. Also provides the <code>build_parser</code> CLI skeleton.</dd>
-          <dt>league.round_robin</dt><dd><code>run_league</code> calls <code>run_arm</code> once per pair. Results resume one pairing at a time, checked by config hash. <code>summarize_league</code> recomputes everything from disk.</dd>
+          <dt>league.round_robin</dt><dd><code>run_league</code> calls <code>run_pairing</code> once per pair, and <code>run_pairing</code> calls <code>run_arm</code>. A consumer can call <code>run_pairing</code> from its own pool to play pairings in parallel without the summary. Results resume one pairing at a time, checked by config hash. <code>summarize_league</code> recomputes everything from disk.</dd>
           <dt>league.ratings</dt><dd>A Bradley-Terry MLE (Hunter MM with a <code>prior_draws</code> prior), anchored onto the Elo scale, with bootstrap CIs, a win matrix and <code>find_cycles</code>.</dd>
         </dl>
       </div>
@@ -345,7 +345,7 @@ footer { font-size: 12.5px; color: var(--muted); }
       <div class="step eval"><span class="k">benchmark.run_arm</span><h3>Seeds + rotation</h3><p><code>n_games</code> consecutive <code>(engine_seed, driver_seed)</code> pairs, with the lineup rotated by <code>rotation_offset(engine_seed) % k</code>. <code>n_games</code> must be a multiple of <code>k</code>.</p></div>
       <div class="step game"><span class="k">game plays</span><h3>Seeded games</h3><p>From <code>run_arm</code>, <code>play</code> gets only seed pairs and recomputes the rotation with <code>seats.rotate</code>. From <code>run_league</code>, it gets <code>ScheduledGame</code>s with the lineup already rotated.</p></div>
       <div class="step mc"><span class="k">benchmark → mc</span><h3>Win rates + CIs</h3><p>Results go through <code>winning_seat</code>, then into <code>by_role</code> and <code>by_seat</code> with Wilson CIs. A two-proportion z-test runs when there are 2 roles. <span style="color:var(--warn)">A post-check raises <code>ValueError</code> if seat occupancy is unbalanced.</span> The payload is <code>stamp</code>ed.</p></div>
-      <div class="step eval"><span class="k">league.ratings</span><h3>Ratings + matrix</h3><p>Each pairing is written to <code>.partial</code>, then moved into place with <code>os.replace</code>. Then: Bradley-Terry fit → Elo anchored on one agent → bootstrap CIs → <code>win_matrix</code> (Wilson CI and residual against BT) → <code>find_cycles</code>. Output goes to <code>league.json</code>.</p></div>
+      <div class="step eval"><span class="k">league.ratings</span><h3>Ratings + matrix</h3><p>Each pairing is written atomically (<code>write_result</code>: temp file, then <code>os.replace</code>). Then: Bradley-Terry fit → Elo anchored on one agent → bootstrap CIs → <code>win_matrix</code> (Wilson CI and residual against BT) → <code>find_cycles</code>. Output goes to <code>league.json</code>.</p></div>
     </div>
     <p class="note"><strong>Ties</strong> (where <code>winning_seat</code> returns <code>None</code>) are left out of the rating fit and reported per pairing. The "Elo" values are a batch Bradley-Terry MLE expressed on the Elo scale, not online Elo updates. <code>summarize_league</code> needs only the stored pairings, so you can refit with a different anchor or prior without replaying any games.</p>
   </section>

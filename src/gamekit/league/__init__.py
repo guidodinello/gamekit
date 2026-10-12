@@ -28,6 +28,7 @@ from gamekit.league.round_robin import (
     pairing_lineup,
     pairing_seeds,
     run_league,
+    run_pairing,
     summarize_league,
 )
 
@@ -43,6 +44,7 @@ __all__ = [
     "pairing_seeds",
     "predicted_win_rate",
     "run_league",
+    "run_pairing",
     "summarize_league",
     "win_matrix",
 ]
