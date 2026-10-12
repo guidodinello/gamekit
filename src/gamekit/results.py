@@ -10,7 +10,9 @@ each game points this at its own ``experiments/results/`` directory.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -45,8 +47,26 @@ def stamp(experiment: str, **fields: Any) -> dict[str, Any]:
 
 def write_result(results_dir: Path, name: str, payload: dict[str, Any]) -> Path:
     """Write ``payload`` as indented JSON to ``results_dir / f"{name}.json"``,
-    creating ``results_dir`` if needed. Returns the written path."""
+    creating ``results_dir`` if needed. Returns the written path.
+
+    The write is atomic: the JSON goes to a uniquely named sibling temp file that
+    is then ``os.replace``d into place, so a crash or a concurrent writer never
+    leaves a torn file and the last complete writer wins.
+    """
     results_dir.mkdir(parents=True, exist_ok=True)
     path = results_dir / f"{name}.json"
-    path.write_text(json.dumps(payload, indent=2, default=str))
+    text = json.dumps(payload, indent=2, default=str)
+    fd, tmp_name = tempfile.mkstemp(dir=results_dir, prefix=f".{name}.", suffix=".tmp")
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+        # mkstemp creates 0600; restore the umask-default mode write_text gave.
+        umask = os.umask(0)
+        os.umask(umask)
+        tmp.chmod(0o666 & ~umask)
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
     return path

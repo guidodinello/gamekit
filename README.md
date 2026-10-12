@@ -82,7 +82,7 @@ flowchart TB
 
     subgraph EVAL["evaluation (stdlib)"]
         benchmark["benchmark<br/>run_arm · build_parser"]
-        roundrobin["league.round_robin<br/>run_league · ScheduledGame"]
+        roundrobin["league.round_robin<br/>run_league · run_pairing · ScheduledGame"]
         ratings["league.ratings<br/>fit_bradley_terry · elo_ratings · win_matrix"]
     end
 

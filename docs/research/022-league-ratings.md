@@ -261,7 +261,8 @@ against its `league.json`, except where a bullet names another source.
 - **Not exercised yet:** the N>2 seat reduction (catan), ties, and the prior at small n. (Superseded for the seat reduction by catan log 013 below; ties and the small-n prior were still not exercised there.)
 - **Next:** the catan first use. A run-pairing API plus an atomic `league.json`
   write would remove the workaround:
-  [gamekit#47](https://github.com/guidodinello/gamekit/issues/47).
+  [gamekit#47](https://github.com/guidodinello/gamekit/issues/47). (Resolved, see the catan
+  first use below.)
 
 **Catan first use, catan log 013 (2026-10-10):** the N>2 seat reduction, the other
 first use. catan log
@@ -325,7 +326,8 @@ scored here. No external source; observed in the log, and the numbers below are 
   3-worker pool: no race, a correct `league.json` from the run itself, and a barrier at the
   end of each pairing that was negligible at n=4000. That workaround is still a workaround
   for [gamekit#47](https://github.com/guidodinello/gamekit/issues/47) (a public `run_pairing`
-  and an atomic `league.json` write), which stays open.
+  and an atomic `league.json` write). **Resolved (#47, Unreleased):** `run_pairing` is public
+  and `write_result` is atomic.
 - **Next:** a trading RL agent (catan #28) before trade skill can sit on this scale; a
   rank-based Plackett-Luce reduction for 4 seats, given how the single scale fits the RL
   block, remains the future work named above. Both first uses are now recorded.

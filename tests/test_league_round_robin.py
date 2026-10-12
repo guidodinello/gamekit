@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,8 @@ from gamekit.league import (
     pairing_lineup,
     pairing_seeds,
     run_league,
+    run_pairing,
+    summarize_league,
 )
 from gamekit.seats import seat_rng
 
@@ -179,3 +182,100 @@ def test_agent_names_are_validated(tmp_path: Path) -> None:
         _league(tmp_path, StubPlayer(), agents=("random", "random"))
     with pytest.raises(ValueError, match="may not contain"):
         _league(tmp_path, StubPlayer(), agents=("random", "a__vs__b"))
+
+
+def _pairing(tmp_path: Path, player: StubPlayer, a: str, b: str, **kw: Any) -> Any:
+    return run_pairing(
+        a, b, num_seats=2, n_per_pairing=400, seed=11, play=player,
+        winning_seat=lambda seat: seat, results_dir=tmp_path, name="L", **kw,
+    )  # fmt: skip
+
+
+def test_config_hash_is_pinned_so_existing_result_dirs_keep_resuming(
+    tmp_path: Path,
+) -> None:
+    # Computed on 0.4.0. Changing it orphans every committed league directory.
+    payload = run_pairing(
+        "a", "b", num_seats=4, n_per_pairing=40, seed=11, play=StubPlayerAB(),
+        winning_seat=lambda seat: seat, results_dir=tmp_path, name="L",
+    )  # fmt: skip
+    assert payload["config_hash"] == "70c17f89ebde"
+    assert (tmp_path / "L" / "a__vs__b.json").exists()
+
+
+class StubPlayerAB(StubPlayer):
+    def __call__(self, games: Sequence[ScheduledGame]) -> list[int]:
+        return [0] * len(games)
+
+
+def test_run_pairing_writes_what_run_league_writes_and_no_summary(
+    tmp_path: Path,
+) -> None:
+    full = _league(tmp_path, StubPlayer(), name="L")
+    pairs = (("mid", "random"), ("mid", "strong"), ("random", "strong"))
+    other = tmp_path / "P"
+    for a, b in pairs:  # reversed on purpose: order-insensitive
+        run_pairing(
+            b, a, num_seats=2, n_per_pairing=400, seed=11, play=StubPlayer(),
+            winning_seat=lambda seat: seat, results_dir=other.parent, name="P",
+        )  # fmt: skip
+    assert not (other / "league.json").exists()
+    for a, b in pairs:
+        stem = f"{a}__vs__{b}.json"
+        assert _strip(json.loads((other / stem).read_text())) == _strip(
+            json.loads((tmp_path / "L" / stem).read_text())
+        )
+    resummed = summarize_league(load_pairings(other), anchor="random", n_bootstrap=50)
+    assert _strip(resummed) == _strip(full)
+
+
+def test_run_pairing_resumes_without_playing_and_refuses_a_changed_config(
+    tmp_path: Path,
+) -> None:
+    first = _pairing(tmp_path, StubPlayer(), "mid", "strong")
+    player = StubPlayer()
+    again = _pairing(tmp_path, player, "strong", "mid")
+    assert player.calls == 0
+    # `first` is the in-memory payload (tuples); `again` came back through JSON.
+    assert again == json.loads(json.dumps(first))
+    with pytest.raises(ValueError, match="different config"):
+        run_pairing(
+            "mid", "strong", num_seats=2, n_per_pairing=800, seed=11,
+            play=StubPlayer(), winning_seat=lambda seat: seat,
+            results_dir=tmp_path, name="L",
+        )  # fmt: skip
+
+
+def test_run_pairing_validates_its_arguments(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="distinct"):
+        _pairing(tmp_path, StubPlayer(), "mid", "mid")
+    with pytest.raises(ValueError, match="may not contain"):
+        _pairing(tmp_path, StubPlayer(), "mid", "a__vs__b")
+    with pytest.raises(NotImplementedError, match="evenly"):
+        run_pairing(
+            "a", "b", num_seats=3, n_per_pairing=3, seed=11, play=StubPlayer(),
+            winning_seat=lambda seat: seat, results_dir=tmp_path, name="L",
+        )  # fmt: skip
+
+
+def test_concurrent_pairings_land_the_same_files_as_a_serial_league(
+    tmp_path: Path,
+) -> None:
+    _league(tmp_path, StubPlayer(), name="serial")
+    pairs = (("mid", "random"), ("mid", "strong"), ("random", "strong"))
+    with ThreadPoolExecutor(3) as pool:
+        list(
+            pool.map(
+                lambda p: run_pairing(
+                    *p, num_seats=2, n_per_pairing=400, seed=11,
+                    play=StubPlayer(), winning_seat=lambda seat: seat,
+                    results_dir=tmp_path, name="par",
+                ),
+                pairs,
+            )
+        )  # fmt: skip
+    for a, b in pairs:
+        stem = f"{a}__vs__{b}.json"
+        assert _strip(json.loads((tmp_path / "par" / stem).read_text())) == _strip(
+            json.loads((tmp_path / "serial" / stem).read_text())
+        )

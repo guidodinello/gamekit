@@ -23,6 +23,12 @@ a, b)`` with ``a < b``, never from a pairing's index, so adding an agent later
 leaves every existing pairing's seeds -- and therefore its resumable file --
 untouched.
 
+**Parallel pairings.** ``run_league`` plays pairings serially. ``run_pairing`` is
+its loop body (hash check, ``run_arm``, atomic write) with no summary side effect,
+so a consumer can run pairings from its own pool and then call
+``summarize_league(load_pairings(league_dir), anchor=...)`` once. It writes the
+same file ``run_league`` would, whatever the roster or argument order.
+
 **Ties.** A game with no winning seat is dropped from the rating fit and the
 win-rate denominators and reported per pairing as ``ties``.
 """
@@ -32,7 +38,6 @@ from __future__ import annotations
 import hashlib
 import itertools
 import json
-import os
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -190,6 +195,85 @@ def summarize_league(
     )
 
 
+def _validate_names(agents: Sequence[str]) -> None:
+    for agent in agents:
+        if "/" in agent or _PAIR_SEP in agent:
+            raise ValueError(
+                f"agent name {agent!r} may not contain '/' or {_PAIR_SEP!r}"
+            )
+
+
+def run_pairing[R](
+    a: str,
+    b: str,
+    *,
+    num_seats: int,
+    n_per_pairing: int,
+    seed: int,
+    play: Callable[[Sequence[ScheduledGame]], Sequence[R]],
+    winning_seat: Callable[[R], int | None],
+    results_dir: Path,
+    name: str,
+    rotation_offset: Callable[[int], int] = lambda engine_seed: engine_seed,
+) -> dict[str, Any]:
+    """Play (or resume) the single pairing ``{a, b}`` and return its payload.
+
+    This is ``run_league``'s loop body without the summary: it writes only
+    ``results_dir/name/<lo>__vs__<hi>.json`` (atomically), never ``league.json``,
+    and needs no anchor. ``(a, b)`` is order-insensitive, and the file, seeds
+    and config hash equal what ``run_league`` writes, so pairings can be run
+    from separate processes and summarized afterwards. A finished file with a
+    matching config hash is returned without calling ``play``; a different hash
+    raises ``ValueError``. Other arguments are as in ``run_league``.
+    """
+    if a == b:
+        raise ValueError(f"a pairing needs two distinct agents, got {a!r} twice")
+    _validate_names((a, b))
+    a, b = sorted((a, b))
+    lineup = pairing_lineup(a, b, num_seats)
+    config = _config(a, b, num_seats, n_per_pairing, seed)
+    chash = _hash(config)
+    final = results_dir / name / f"{a}{_PAIR_SEP}{b}.json"
+    if final.exists():
+        stored: dict[str, Any] = json.loads(final.read_text())
+        if stored.get("config_hash") != chash:
+            raise ValueError(
+                f"{final} was produced with a different config "
+                f"(hash {stored.get('config_hash')}, expected {chash}); use a new "
+                "name or results_dir instead of reusing it"
+            )
+        return stored
+
+    def play_games(pairs: Sequence[tuple[int, int]]) -> Sequence[R]:
+        return play(
+            [
+                ScheduledGame(
+                    engine_seed=e,
+                    driver_seed=d,
+                    lineup=rotate(lineup, rotation_offset(e) % len(lineup)),
+                )
+                for e, d in pairs
+            ]
+        )
+
+    payload = run_arm(
+        lineup=lineup,
+        num_seats=num_seats,
+        n_games=n_per_pairing,
+        engine_seed_base=config["engine_seed_base"],
+        driver_seed_base=config["driver_seed_base"],
+        play=play_games,
+        winning_seat=winning_seat,
+        rotation_offset=rotation_offset,
+    )
+    payload["league_config"] = config
+    payload["config_hash"] = chash
+    # write_result is write-then-rename, so a crash never leaves a half-written
+    # pairing that a resume would trust.
+    write_result(final.parent, final.stem, payload)
+    return payload
+
+
 def run_league[R](
     *,
     agents: Sequence[str],
@@ -215,64 +299,29 @@ def run_league[R](
     identity: they must be distinct and may not contain ``/`` or ``__vs__``.
     ``n_per_pairing`` must be a multiple of ``num_seats`` (``run_arm``'s exact
     rotation contract). The summary is also written to
-    ``results_dir/name/league.json``.
+    ``results_dir/name/league.json`` (atomically). To play pairings in
+    parallel without the summary, call ``run_pairing`` per pair instead.
     """
     if len(set(agents)) != len(agents) or len(agents) < 2:
         raise ValueError("agents must be at least two distinct names")
-    for agent in agents:
-        if "/" in agent or _PAIR_SEP in agent:
-            raise ValueError(
-                f"agent name {agent!r} may not contain '/' or {_PAIR_SEP!r}"
-            )
+    _validate_names(agents)
     if anchor not in agents:
         raise ValueError(f"anchor {anchor!r} is not one of the agents")
 
     league_dir = results_dir / name
     for a, b in itertools.combinations(sorted(agents), 2):
-        lineup = pairing_lineup(a, b, num_seats)
-        config = _config(a, b, num_seats, n_per_pairing, seed)
-        chash = _hash(config)
-        stem = f"{a}{_PAIR_SEP}{b}"
-        final = league_dir / f"{stem}.json"
-        if final.exists():
-            stored = json.loads(final.read_text()).get("config_hash")
-            if stored != chash:
-                raise ValueError(
-                    f"{final} was produced with a different config "
-                    f"(hash {stored}, expected {chash}); use a new name or "
-                    "results_dir instead of reusing it"
-                )
-            continue
-
-        def play_pairing(
-            pairs: Sequence[tuple[int, int]], lineup: tuple[str, ...] = lineup
-        ) -> Sequence[R]:
-            games = [
-                ScheduledGame(
-                    engine_seed=e,
-                    driver_seed=d,
-                    lineup=rotate(lineup, rotation_offset(e) % len(lineup)),
-                )
-                for e, d in pairs
-            ]
-            return play(games)
-
-        payload = run_arm(
-            lineup=lineup,
+        run_pairing(
+            a,
+            b,
             num_seats=num_seats,
-            n_games=n_per_pairing,
-            engine_seed_base=config["engine_seed_base"],
-            driver_seed_base=config["driver_seed_base"],
-            play=play_pairing,
+            n_per_pairing=n_per_pairing,
+            seed=seed,
+            play=play,
             winning_seat=winning_seat,
+            results_dir=results_dir,
+            name=name,
             rotation_offset=rotation_offset,
         )
-        payload["league_config"] = config
-        payload["config_hash"] = chash
-        # Write-then-rename so a crash never leaves a half-written pairing
-        # that a resume would trust.
-        partial = write_result(league_dir, f"{stem}.partial", payload)
-        os.replace(partial, final)
 
     # Only this run's roster: a directory reused after the roster shrank may
     # hold pairings (never config-checked here) for agents no longer in it.
