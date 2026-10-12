@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   torn file. This applies to every caller, not only the league. The bytes written
   are the same; `os.replace` replaces a symlink instead of writing through it,
   and a new file gets the umask-default mode (#47).
+- `.pre-commit-config.yaml`: the mypy hook is now a local hook running
+  `uv run --locked --extra rl mypy src tests`, so it type-checks against the
+  versions in `uv.lock` (it used `mirrors-mypy` with floating `additional_dependencies`).
+  CI's `pre-commit` job no longer sets `SKIP=mypy` (#63).
 - `.github/workflows/release.yml`: its actions are now pinned to commit SHAs and
   checkout no longer persists the token, as the release job holds `contents: write`.
 
