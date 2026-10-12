@@ -245,8 +245,8 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
 
-      # pre-commit comes from the locked dev group; the local tach hook
-      # (`uv run tach check`) needs the same synced environment.
+      # pre-commit comes from the locked dev group; the local tach and mypy
+      # hooks (`uv run ...`) run in the same locked environment.
       - name: Install dependencies
         run: uv sync --locked --dev
 
@@ -255,13 +255,7 @@ jobs:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ steps.py.outputs.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
-      # mypy is skipped: its hook env floats gymnasium/numpy to the latest
-      # releases (`>=` in .pre-commit-config.yaml), which type-checks
-      # differently from the locked versions and already fails on rl/env.py.
-      # `Typecheck Python` and `RL extra` run mypy against uv.lock instead.
       - name: pre-commit
-        env:
-          SKIP: mypy
         run: uv run --locked pre-commit run --all-files --show-diff-on-failure
 
   lint-workflows:

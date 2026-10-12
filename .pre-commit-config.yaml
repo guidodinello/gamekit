@@ -32,17 +32,6 @@ repos:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.4.0
-    hooks:
-      - id: mypy
-        # The hook's isolated env otherwise lacks pytest, so mypy can't
-        # type-check the fixtures/parametrize usage in tests/. gymnasium/numpy
-        # are here too so gamekit.rl.env is actually type-checked locally,
-        # not just waved through by the ignore_missing_imports override in
-        # pyproject.toml (gamekit#7).
-        additional_dependencies: ["pytest>=9.1.1", "gymnasium>=1.4.0", "numpy>=2.5.3"]
-
   # Module boundaries (tach.toml, gamekit#56). A local hook, not `tach install`,
   # which would overwrite pre-commit's own git hook. Runs at the default
   # commit stage: tach takes well under a second, and a pre-push stage would
@@ -55,3 +44,21 @@ repos:
         language: system
         types_or: [python, toml]
         pass_filenames: false
+
+  # mypy runs from the locked environment, not a pre-commit-managed one: a
+  # mirrors-mypy hook pip-installs its additional_dependencies with no lockfile,
+  # so gymnasium/numpy (and mypy itself) floated to the latest releases and
+  # type-checked differently from CI (gamekit#63). `--locked` fails on a stale
+  # uv.lock instead of silently using it; `--extra rl` installs gymnasium/numpy
+  # so their real types are checked, not waved through by the
+  # ignore_missing_imports override in pyproject.toml (gamekit#7). `files`
+  # includes uv.lock so a lock-only bump re-runs the hook.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (locked environment)
+        entry: uv run --locked --extra rl mypy src tests
+        language: system
+        files: ^(src/|tests/|pyproject\.toml$|uv\.lock$)
+        pass_filenames: false
+        require_serial: true
