@@ -71,6 +71,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CI's `pre-commit` job no longer sets `SKIP=mypy` (#63).
 - `.github/workflows/release.yml`: its actions are now pinned to commit SHAs and
   checkout no longer persists the token, as the release job holds `contents: write`.
+- Every workflow now pins its actions to commit SHAs and checks out with
+  `persist-credentials: false`; the actionlint image is pinned by digest, and
+  `release.yml` no longer restores the setup-uv cache. `Lint Workflows` also runs zizmor
+  as a non-blocking step. `dependabot-automerge.yml` gates on the PR author, mints its App
+  token with only `contents`/`pull-requests` write, and no longer auto-merges
+  `github-actions` bumps. Dependabot waits 7 days after a release (`cooldown`) and keeps
+  majors out of the dependency group. Synced from dev-standards.
 
 ## [0.4.0] - 2026-10-10
 
