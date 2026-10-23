@@ -7,7 +7,7 @@ from __future__ import annotations
 import math
 from typing import NamedTuple
 
-from gamekit.mc.intervals import _NORMAL
+from gamekit.mc._common import NORMAL
 
 
 class TwoProportionTest(NamedTuple):
@@ -26,7 +26,7 @@ def two_proportion_test(k1: int, n1: int, k2: int, n2: int) -> TwoProportionTest
     if se == 0:
         return TwoProportionTest(z=0.0, p_value=1.0)
     z = (p1 - p2) / se
-    p_value = 2 * (1 - _NORMAL.cdf(abs(z)))
+    p_value = 2 * (1 - NORMAL.cdf(abs(z)))
     return TwoProportionTest(z=z, p_value=p_value)
 
 

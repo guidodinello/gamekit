@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   copying it. `SingleAgentEnv` now calls them; the RNG draw order is unchanged
   (#55).
 - `SingleAgentEnv(max_redeals=...)` (default `MAX_REDEALS_DEFAULT = 100`).
+- README: a "Monte Carlo statistics" section saying what each part of `gamekit.mc`
+  is for (intervals and tests, sample size, the fold, adaptive stopping, variance
+  reduction), with an example each. The `gamekit.mc` module docstring has the same
+  map. The whole `mc` surface stays public (#53).
 - `gamekit.league.run_pairing(a, b, ...)`: the loop body of `run_league` (config
   hash check, `run_arm`, atomic write) as a public function. It writes only the
   pairing file, never `league.json`, and needs no anchor, so a consumer can play
@@ -47,6 +51,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `SingleAgentEnv` docstring and README no longer say catan "needs a
   factored/hierarchical head" (its atom composer is one); the real reason it
   has its own env is that an env step is not always one engine action (#55).
+- The `mc` helpers that sibling modules shared (`_NORMAL`, `_z_score`, `_drawn`) now
+  live in a private `gamekit/mc/_common.py` instead of being imported across modules
+  as underscore names. No public change: `gamekit.mc.__all__` is the same (#51).
+- `tach.toml` now declares an `[[interfaces]]` entry for `gamekit.mc` exposing all
+  of `gamekit.mc.__all__`, so other gamekit modules must import mc names from the
+  package, not from a submodule. A test keeps the list in sync with `__all__` (#53).
 - `gamekit.results.write_result` is now atomic: it writes a uniquely named temp
   file in the same directory and `os.replace`s it into place, so concurrent
   writers (e.g. parallel `run_league` calls writing `league.json`) cannot leave a

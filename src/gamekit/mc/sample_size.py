@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import math
 
-from gamekit.mc.intervals import _NORMAL, _z_score
+from gamekit.mc._common import NORMAL, z_score
 
 
 def sample_size_clt(eps: float, delta: float) -> int:
@@ -15,7 +15,7 @@ def sample_size_clt(eps: float, delta: float) -> int:
 
     n >= (z_{delta/2} / (2 eps))^2
     """
-    z = _z_score(delta)
+    z = z_score(delta)
     return math.ceil((z / (2 * eps)) ** 2)
 
 
@@ -36,7 +36,7 @@ def two_proportion_sample_size(
     proportions both near ``p``, at significance ``alpha`` and the given
     ``power`` (normal approximation, equal-n two-sample test).
     """
-    z_alpha = _z_score(alpha)
-    z_power = _NORMAL.inv_cdf(power)
+    z_alpha = z_score(alpha)
+    z_power = NORMAL.inv_cdf(power)
     variance_term = 2 * p * (1 - p)
     return math.ceil(((z_alpha + z_power) ** 2 * variance_term) / delta**2)

@@ -122,3 +122,22 @@ def test_mean_accumulator_raises_below_minimum_sample_count(n: int) -> None:
     acc.update_all(range(n))
     with pytest.raises(ZeroDivisionError):
         _ = acc.variance
+
+
+def test_tach_mc_interface_exposes_exactly_the_public_surface() -> None:
+    """tach.toml's gamekit.mc interface must track gamekit.mc.__all__: a name
+    missing there would be unimportable from other gamekit modules, and a stale
+    one would expose something that is no longer public."""
+    import tomllib
+    from pathlib import Path
+
+    import gamekit.mc
+
+    config = tomllib.loads(
+        (Path(__file__).parent.parent / "tach.toml").read_text(encoding="utf-8")
+    )
+    [interface] = [i for i in config["interfaces"] if i["from"] == ["gamekit.mc"]]
+    exposed = {
+        pattern.removeprefix("^").removesuffix("$") for pattern in interface["expose"]
+    }
+    assert exposed == set(gamekit.mc.__all__)

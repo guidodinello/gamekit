@@ -56,6 +56,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
+from gamekit.mc._common import drawn
 from gamekit.mc.accumulate import Accumulator
 from gamekit.mc.intervals import MCResult
 
@@ -127,17 +128,6 @@ class WelfordAccumulator:
         return MCResult(mean=state.mean, variance=state.m2 / (state.n - 1), n=state.n)
 
 
-def _drawn[T](sampler: Sampler[T], n: int) -> list[T]:
-    """Consume ``sampler(n)`` and require exactly ``n`` values -- the
-    iterable-consumption contract this module's docstring commits to."""
-    values = list(sampler(n))
-    if len(values) != n:
-        raise ValueError(
-            f"sampler(n={n}) returned {len(values)} values, expected exactly {n}"
-        )
-    return values
-
-
 def monte_carlo_reduce[T, V, S, R](
     n: int,
     sampler: Sampler[T],
@@ -159,7 +149,7 @@ def monte_carlo_reduce[T, V, S, R](
     if n <= 0:
         raise ValueError(f"n must be positive, got {n}")
     state = accumulator.init
-    for x in _drawn(sampler, n):
+    for x in drawn(sampler, n):
         state = accumulator.update(state, evaluator(x))
     return accumulator.finalize(state)
 

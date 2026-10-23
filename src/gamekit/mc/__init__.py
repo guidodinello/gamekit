@@ -20,6 +20,23 @@ gaps directly:
 - **Gap 5** (adaptive stopping) -- see ``gamekit.mc.stopping``:
   ``monte_carlo_until`` runs the gap-1 fold in chunks until a target
   confidence-interval half-width is reached or a hard cap is hit.
+
+What each part is for (the README's "Monte Carlo statistics" section has an
+example of each):
+
+- ``intervals``, ``testing``: ``wilson_interval`` for any proportion,
+  ``two_proportion_test`` to compare two arms, ``benjamini_hochberg`` to control
+  the false-discovery rate over many comparisons.
+- ``sample_size``: plan ``n`` before a run (``two_proportion_sample_size`` for
+  detecting a difference, ``sample_size_clt``/``sample_size_hoeffding`` for a
+  bounded mean).
+- ``sample``, ``accumulate``: the ``Sampler -> Evaluator -> Accumulator`` fold.
+  ``monte_carlo`` for a mean, ``monte_carlo_reduce`` for any custom estimand.
+- ``stopping``: ``monte_carlo_until`` when ``n`` is not known upfront.
+- ``variance``: ``antithetic``/``control_variate`` wrappers that cut estimator
+  variance at the same budget.
+
+``_common`` holds helpers shared between these modules and is not public.
 """
 
 from __future__ import annotations

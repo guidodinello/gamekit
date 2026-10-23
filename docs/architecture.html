@@ -164,7 +164,7 @@ footer { font-size: 12.5px; color: var(--muted); }
 
           <text class="t-col" x="40" y="16">EVALUATION PATH · stdlib</text>
           <text class="t-col" x="600" y="16">RL PATH · [rl] extra for env only</text>
-          <line class="divider" x1="577" y1="6" x2="577" y2="408"></line>
+          <line class="divider" x1="577" y1="6" x2="577" y2="480"></line>
 
           <g transform="translate(0,20)">
             <!-- ===== edges: evaluation ===== -->
@@ -178,8 +178,10 @@ footer { font-size: 12.5px; color: var(--muted); }
             <path class="e" d="M430,82 V138" marker-end="url(#arr)"></path>
             <!-- mc internal -->
             <path class="e" d="M430,219 V328" marker-end="url(#arr)"></path>
-            <path class="e" d="M370,295 V328" marker-end="url(#arr)"></path>
-            <path class="e" d="M490,295 V328" marker-end="url(#arr)"></path>
+            <path class="e" d="M430,376 V403" marker-end="url(#arr)"></path>
+            <path class="e" d="M315,275 H307 V425 H313" marker-end="url(#arr)"></path>
+            <path class="e" d="M545,275 H551 V425 H547" marker-end="url(#arr)"></path>
+            <path class="e" d="M545,195 H557 V435 H547" marker-end="url(#arr)"></path>
 
             <!-- ===== edges: rl ===== -->
             <path class="e" d="M800,56 H828" marker-end="url(#arr)"></path>
@@ -204,7 +206,7 @@ footer { font-size: 12.5px; color: var(--muted); }
               <text class="t-name" x="195" y="172" text-anchor="middle">benchmark</text>
               <text class="t-sub" x="195" y="190" text-anchor="middle">run_arm · build_parser</text></g>
 
-            <rect class="pkg" x="300" y="140" width="260" height="248" rx="10"></rect>
+            <rect class="pkg" x="300" y="140" width="260" height="320" rx="10"></rect>
             <text class="t-pkg" x="314" y="160">gamekit.mc (package import)</text>
             <g class="node mc"><rect x="315" y="171" width="230" height="48" rx="7"></rect>
               <text class="t-name" x="430" y="191" text-anchor="middle">sample · accumulate</text>
@@ -216,6 +218,9 @@ footer { font-size: 12.5px; color: var(--muted); }
             <g class="node mc"><rect x="315" y="330" width="230" height="46" rx="7"></rect>
               <text class="t-name" x="430" y="350" text-anchor="middle">intervals</text>
               <text class="t-sub" x="430" y="367" text-anchor="middle">wilson_interval · MCResult</text></g>
+            <g class="node mc"><rect x="315" y="405" width="230" height="46" rx="7"></rect>
+              <text class="t-name" x="430" y="425" text-anchor="middle">_common (private)</text>
+              <text class="t-sub" x="430" y="442" text-anchor="middle">NORMAL · z_score · drawn</text></g>
 
             <g class="node core"><rect x="40" y="420" width="115" height="52" rx="7"></rect>
               <text class="t-name" x="97" y="442" text-anchor="middle">seats</text>
@@ -250,7 +255,7 @@ footer { font-size: 12.5px; color: var(--muted); }
           </g>
         </svg>
       </div>
-      <figcaption>Every arrow comes from an <code>import</code> line on origin/main. The evaluation and RL columns share no edge. <code>Agent</code> is imported only by the RL modules: <code>benchmark</code> and <code>league</code> handle agent <em>names</em> and leave instantiation to the game's <code>play</code> callable. <code>benchmark</code> and <code>league.ratings</code> import through the <code>gamekit.mc</code> package, so loading either one loads every mc submodule. The arrows into <code>intervals</code> stand for <code>testing</code>, <code>sample_size</code>, <code>accumulate</code> and <code>sample</code> importing it; <code>stopping</code> and <code>variance</code> import <code>sample</code>, and <code>stopping</code> also imports <code>intervals</code> directly.</figcaption>
+      <figcaption>Every arrow comes from an <code>import</code> line on origin/main. The evaluation and RL columns share no edge. <code>Agent</code> is imported only by the RL modules: <code>benchmark</code> and <code>league</code> handle agent <em>names</em> and leave instantiation to the game's <code>play</code> callable. <code>benchmark</code> and <code>league.ratings</code> import through the <code>gamekit.mc</code> package, so loading either one loads every mc submodule. The arrows into <code>_common</code> (a private helper module, #51) stand for <code>intervals</code>, <code>testing</code>, <code>sample_size</code> and the fold (<code>sample</code>, <code>stopping</code>) importing it. The arrow into <code>intervals</code> stands for <code>accumulate</code>, <code>sample</code> and <code>stopping</code> importing <code>MCResult</code>; <code>stopping</code> and <code>variance</code> import <code>sample</code>.</figcaption>
     </figure>
   </section>
 
@@ -268,6 +273,7 @@ footer { font-size: 12.5px; color: var(--muted); }
       <div class="group mc">
         <h3>mc · stdlib</h3>
         <dl>
+          <dt>mc._common</dt><dd>Private helpers shared by the other mc modules: the normal distribution, <code>z_score</code> and <code>drawn</code>. Not exported (#51).</dd>
           <dt>mc.intervals</dt><dd><code>wilson_interval</code>, <code>ConfidenceInterval</code>, and <code>MCResult</code> with a normal CI.</dd>
           <dt>mc.testing</dt><dd><code>two_proportion_test</code> (z, p) and <code>benjamini_hochberg</code>.</dd>
           <dt>mc.sample_size</dt><dd>CLT, Hoeffding and two-proportion sample-size formulas.</dd>
@@ -397,8 +403,7 @@ footer { font-size: 12.5px; color: var(--muted); }
     <ul class="surprises">
       <li>Evaluation and RL are siblings, not layers. RL imports nothing from <code>mc</code>, <code>benchmark</code> or <code>league</code>, and evaluation never imports <code>Agent</code>.</li>
       <li><code>seats.seat_rng</code> is not called anywhere inside gamekit. It exists for games (catan uses it in its benchmark, league and server bots).</li>
-      <li>Neither consumer uses the MC fold (<code>monte_carlo*</code>, <code>stopping</code>, <code>variance</code>) on origin/main. The only mc names they import are <code>wilson_interval</code>, <code>two_proportion_test</code> and <code>benjamini_hochberg</code>.</li>
-      <li><code>mc.testing</code>, <code>mc.sample_size</code> and <code>mc.stopping</code> import private names (<code>_NORMAL</code>, <code>_z_score</code>, <code>_drawn</code>) across modules.</li>
+      <li>Neither consumer uses the MC fold (<code>monte_carlo*</code>, <code>stopping</code>, <code>variance</code>) on origin/main. The only mc names they import are <code>wilson_interval</code>, <code>two_proportion_test</code> and <code>benjamini_hochberg</code>. gamekit is a library, so the fold stays public and documented (#53); see the README's Monte Carlo section.</li>
       <li><code>TurnBasedGame</code> is the only Protocol without <code>@runtime_checkable</code>.</li>
     </ul>
   </section>
