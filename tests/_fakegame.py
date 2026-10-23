@@ -85,6 +85,27 @@ class FakeGame:
         return state.turn_player
 
 
+class ScriptedDealGame(FakeGame):
+    """A ``FakeGame`` that records the seed of every ``reset`` and whose first
+    ``terminal_deals`` deals are already terminal (so the learner never acts),
+    to exercise the re-deal loop."""
+
+    def __init__(
+        self, num_seats: int = 3, step_limit: int = 12, terminal_deals: int = 0
+    ) -> None:
+        super().__init__(num_seats=num_seats, step_limit=step_limit)
+        self.terminal_deals = terminal_deals
+        self.reset_seeds: list[int | None] = []
+
+    def reset(self, seed: int | None = None) -> FakeState:
+        self.reset_seeds.append(seed)
+        dead = len(self.reset_seeds) <= self.terminal_deals
+        return FakeState(
+            num_seats=self.num_seats,
+            step_limit=0 if dead else self.step_limit,
+        )
+
+
 class FakeAgent:
     """A scripted ``Agent[FakeState, int]``: ``policy`` picks from
     ``legal_actions``, defaulting to "always take the first legal action."

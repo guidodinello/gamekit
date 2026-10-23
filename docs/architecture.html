@@ -289,7 +289,7 @@ footer { font-size: 12.5px; color: var(--muted); }
         <h3>rl · stdlib except env</h3>
         <dl>
           <dt>rl.protocols</dt><dd><code>TurnBasedGame</code>, <code>ActionCodec</code> and <code>RewardFn</code>: the seams a game adapts to.</dd>
-          <dt>rl.driver</dt><dd><code>advance_until_learner</code> steps every seat whose agent is not <code>None</code> until the learner must act.</dd>
+          <dt>rl.driver</dt><dd><code>advance_until_learner</code> steps every seat whose agent is not <code>None</code> until the learner must act. <code>place_fixed_agents</code> and <code>deal_until_learner</code> (bounded re-deal) are the reset pieces any single-agent env shares.</dd>
           <dt>rl.masking</dt><dd><code>legal_action_mask</code> (returns <code>list[bool]</code>) and <code>coerce_to_legal</code> (an illegal index becomes a random legal one).</dd>
           <dt>rl.selfplay</dt><dd><code>OpponentPool</code> globs a run-scoped checkpoint directory and mixes in a baseline agent.</dd>
           <dt>rl.env</dt><dd><code>SingleAgentEnv</code> is a gymnasium env for flat, masked-<code>Discrete</code> games. It is the only module that needs gymnasium and numpy.</dd>
@@ -354,12 +354,12 @@ footer { font-size: 12.5px; color: var(--muted); }
     <h2 id="flow-b">Data flow B: RL self-play</h2>
     <div class="flow">
       <div class="step game"><span class="k">game supplies</span><h3>Adapter + codec</h3><p>A <code>TurnBasedGame</code> adapter, an <code>ActionCodec</code>, <code>encode</code>, a <code>RewardFn</code> and an observation space.</p></div>
-      <div class="step rl"><span class="k">SingleAgentEnv.reset</span><h3>Seat the episode</h3><p>Reseed, then pick the learner's seat. Fill the other seats from <code>OpponentPool.seat_agents</code> (or a fixed list) and call <code>reset()</code> on each agent. Deal with <code>game.reset(seed)</code>, call <code>on_episode_start</code>, and advance. A game that ends before the learner acts is re-dealt. This draw order is part of the contract.</p></div>
+      <div class="step rl"><span class="k">SingleAgentEnv.reset</span><h3>Seat the episode</h3><p>Reseed, then pick the learner's seat. Fill the other seats from <code>OpponentPool.seat_agents</code> (or a fixed list) and call <code>reset()</code> on each agent. Deal with <code>game.reset(seed)</code>, call <code>on_episode_start</code>, and advance. A game that ends before the learner acts is re-dealt, up to <code>max_redeals</code> times (default 100), then <code>RuntimeError</code>. This draw order is part of the contract.</p></div>
       <div class="step rl"><span class="k">step(action)</span><h3>Masked move</h3><p><code>legal_action_mask</code> builds the mask. An illegal index is coerced to a legal one (or raises). Then <code>codec.from_index</code> → <code>apply_action</code> → <code>advance_until_learner</code> → <code>reward.compute</code>. <code>action_masks()</code> exposes the mask to sb3-contrib.</p></div>
       <div class="step game outside"><span class="k">caller's trainer · outside gamekit</span><h3>Write checkpoints</h3><p>The trainer (sb3-contrib in truco-py) saves models to <code>pool.checkpoint_dir</code>, which is <code>directory/run_id</code>.</p></div>
       <div class="step rl"><span class="k">rl.selfplay</span><h3>Resample opponents</h3><p><code>OpponentPool.sample</code> re-globs the directory. With probability <code>1 − baseline_mix</code> (default 0.2 mix) it returns <code>load_opponent(path)</code>; otherwise <code>baseline_factory()</code>. With no checkpoints yet it always returns the baseline. The result feeds the next <code>reset</code>.</p></div>
     </div>
-    <p class="note"><strong>The loop closes outside the library.</strong> gamekit only reads checkpoint paths and calls the loader you inject. It never imports torch or stable-baselines3. Games with spatial or variable action spaces skip <code>SingleAgentEnv</code> and build their own <code>gym.Env</code> from <code>protocols</code>, <code>driver</code> and <code>selfplay</code>.</p>
+    <p class="note"><strong>The loop closes outside the library.</strong> gamekit only reads checkpoint paths and calls the loader you inject. It never imports torch or stable-baselines3. Games whose env step is not always one engine action (catan's sub-steps) skip <code>SingleAgentEnv</code> and build their own <code>gym.Env</code> from <code>protocols</code>, <code>driver</code> and <code>selfplay</code>.</p>
   </section>
 
   <section aria-labelledby="hooks">
