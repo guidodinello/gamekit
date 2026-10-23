@@ -6,15 +6,18 @@ Extracted from ``truco-py/training/env.py``'s ``TrucoEnv``. This is the only
 extra -- everything it delegates to (``protocols``, ``driver``, ``selfplay``,
 ``masking``) stays importable with no extra installed.
 
-**Scope, stated honestly (gamekit#7 / catan Phase 5):** this env serves the
-*flat, masked-``Discrete``* case -- one action index in, one mask vector out.
+**Scope, stated honestly (gamekit#7 / gamekit#55):** this env serves the
+case where *one env step is one engine action* -- one action index in, one
+mask vector out, ``ActionCodec`` mapping each index to exactly one action.
 catan's action space is spatial and variable (a discard is a hand-sized
-multiset choice; a trade proposal is an open-ended sentinel `legal_actions`
-cannot enumerate), so catan's README concludes it needs a factored/
-hierarchical action head, which this class does not provide. What catan (or
-any variable-action-space game) reuses instead is ``protocols``, ``driver``
-and ``selfplay`` directly, writing its own ``gym.Env`` around them -- that
-split is the reason those three modules don't live inside this one.
+multiset choice; a trade proposal is open-ended), so catan spells one
+multi-parameter action as a short sequence of atoms over consecutive env
+steps. Those sub-steps apply nothing to the engine, return reward 0 and use
+no step budget, which breaks the one-index-one-action contract this class is
+built on. (It is not that catan lacks a factored head: its atom composer is
+one.) A game like that writes its own ``gym.Env`` around ``protocols``,
+``driver`` (including ``place_fixed_agents`` and ``deal_until_learner``, the
+reset pieces shared with this class) and ``selfplay``.
 """
 
 from __future__ import annotations
@@ -29,26 +32,15 @@ from gymnasium import spaces
 from numpy.typing import NDArray
 
 from gamekit.agent import Agent
-from gamekit.rl.driver import advance_until_learner
+from gamekit.rl.driver import (
+    MAX_REDEALS_DEFAULT,
+    advance_until_learner,
+    deal_until_learner,
+    place_fixed_agents,
+)
 from gamekit.rl.masking import coerce_to_legal, legal_action_mask
 from gamekit.rl.protocols import ActionCodec, RewardFn, TurnBasedGame
 from gamekit.rl.selfplay import OpponentPool
-
-
-def _place_fixed_agents[StateT, ActionT](
-    agents: Sequence[Agent[StateT, ActionT]], num_seats: int, learner_seat: int
-) -> list[Agent[StateT, ActionT] | None]:
-    """Map a fixed, seat-order opponent list onto every non-learner seat --
-    ``agents[0]`` goes to the lowest-numbered non-learner seat, and so on.
-    Matches ``truco-py/training/env.py``'s ``_opponent_idx`` mapping exactly,
-    so a fixed-opponent-list env behaves identically regardless of which
-    seat the learner is assigned each episode.
-    """
-    result: list[Agent[StateT, ActionT] | None] = [None] * num_seats
-    non_learner_seats = [s for s in range(num_seats) if s != learner_seat]
-    for index, seat in enumerate(non_learner_seats):
-        result[seat] = agents[index]
-    return result
 
 
 class SingleAgentEnv[StateT, ActionT](gym.Env[NDArray[np.float32], np.int64]):
@@ -69,7 +61,19 @@ class SingleAgentEnv[StateT, ActionT](gym.Env[NDArray[np.float32], np.int64]):
     ``on_illegal`` matches truco-py's default exactly: ``"coerce"`` replaces
     an illegal action index with a uniformly random legal one, drawing from
     this env's own RNG -- a real policy choice, not a law, so ``"raise"`` is
-    also available for callers who'd rather fail loudly.
+    also available for callers who'd rather fail loudly. An index outside
+    ``[0, codec.n_actions)`` is treated as illegal, not wrapped or raised as
+    ``IndexError``.
+
+    ``step_budget`` counts engine actions -- the learner's and every
+    opponent's -- not learner decisions, so it guards against runaway games
+    however they arise. It is checked after the opponents have advanced, so
+    an episode can overshoot it, and it does not bound a single advance that
+    never returns. Opponent moves made inside ``reset()`` are not counted.
+
+    ``max_redeals`` bounds the deal attempts in ``reset()`` (see
+    ``gamekit.rl.driver.deal_until_learner``); exhausting it raises
+    ``RuntimeError``.
     """
 
     metadata: dict[str, list[str]] = {"render_modes": []}
@@ -88,6 +92,7 @@ class SingleAgentEnv[StateT, ActionT](gym.Env[NDArray[np.float32], np.int64]):
         randomize_seat: bool = True,
         on_illegal: Literal["coerce", "raise"] = "coerce",
         step_budget: int | None = None,
+        max_redeals: int = MAX_REDEALS_DEFAULT,
         seed: int | None = None,
     ) -> None:
         if (agents is None) == (opponent_pool is None):
@@ -101,6 +106,8 @@ class SingleAgentEnv[StateT, ActionT](gym.Env[NDArray[np.float32], np.int64]):
             raise ValueError(
                 f"on_illegal must be 'coerce' or 'raise', got {on_illegal!r}"
             )
+        if max_redeals < 1:
+            raise ValueError(f"max_redeals must be >= 1, got {max_redeals}")
         if observation_space.shape is None:
             raise ValueError("observation_space must have a concrete shape")
 
@@ -114,6 +121,7 @@ class SingleAgentEnv[StateT, ActionT](gym.Env[NDArray[np.float32], np.int64]):
         self._randomize_seat = randomize_seat
         self._on_illegal = on_illegal
         self._step_budget = step_budget
+        self._max_redeals = max_redeals
         self._rng = random.Random(seed)
 
         self.observation_space = observation_space
@@ -159,7 +167,7 @@ class SingleAgentEnv[StateT, ActionT](gym.Env[NDArray[np.float32], np.int64]):
             )
         else:
             assert self._fixed_agents is not None  # enforced in __init__
-            seat_agents = _place_fixed_agents(
+            seat_agents = place_fixed_agents(
                 self._fixed_agents, self._num_seats, self._learner_seat
             )
         for agent in seat_agents:
@@ -167,12 +175,13 @@ class SingleAgentEnv[StateT, ActionT](gym.Env[NDArray[np.float32], np.int64]):
                 agent.reset()
         self._seat_agents = seat_agents
 
-        while True:
-            state = self._game.reset(seed=self._rng.randint(0, 2**31 - 1))
-            self.on_episode_start(state, self._learner_seat)
-            advance_until_learner(self._game, state, seat_agents)
-            if not self._game.is_terminal(state):
-                break
+        state = deal_until_learner(
+            self._game,
+            self._rng,
+            seat_agents,
+            on_deal=lambda s: self.on_episode_start(s, self._learner_seat),
+            max_redeals=self._max_redeals,
+        )
 
         self._state = state
         self._episode_steps = 0
@@ -191,7 +200,7 @@ class SingleAgentEnv[StateT, ActionT](gym.Env[NDArray[np.float32], np.int64]):
 
         mask = self._legal_mask()
         index = int(action)
-        if not mask[index]:
+        if not (0 <= index < self._codec.n_actions and mask[index]):
             if self._on_illegal == "raise":
                 raise ValueError(f"illegal action index {index}")
             index = coerce_to_legal(index, mask, self._rng)
@@ -199,8 +208,9 @@ class SingleAgentEnv[StateT, ActionT](gym.Env[NDArray[np.float32], np.int64]):
         action_obj = self._codec.from_index(index)
         state = self._game.apply_action(self._state, action_obj)
         self._episode_steps += 1
-
-        advance_until_learner(self._game, state, self._seat_agents)
+        self._episode_steps += advance_until_learner(
+            self._game, state, self._seat_agents
+        )
         self._state = state
 
         terminated = self._game.is_terminal(state)

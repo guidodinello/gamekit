@@ -35,7 +35,8 @@ history.
   training loop, extracted from `truco-py`'s `training/env.py`:
   `gamekit.rl.protocols` (`TurnBasedGame`, `ActionCodec`, `RewardFn` —
   stdlib), `gamekit.rl.driver` (`advance_until_learner`, auto-stepping every
-  non-learner seat until the learner must act — stdlib),
+  non-learner seat until the learner must act, plus the shared reset helpers
+  `place_fixed_agents` and `deal_until_learner` — stdlib),
   `gamekit.rl.selfplay` (`OpponentPool`, checkpoint resampling with a
   baseline-mix fallback, run-scoped via `run_id` — stdlib),
   `gamekit.rl.masking` (legal-action mask building and coercing an illegal
@@ -46,12 +47,17 @@ history.
   stable-baselines3/sb3-contrib) — checkpoint loading is injected by the
   caller as a plain callable.
 
-  **What a variable/spatial-action-space game (e.g. `catan`'s planned Phase
-  5) would supply, not build**: `SingleAgentEnv` serves the flat,
-  masked-`Discrete` case only. A game whose legal-action set can't be
-  enumerated into a fixed-width mask reuses `protocols`/`driver`/`selfplay`
-  directly and writes its own `gym.Env` around them — the module split
-  exists specifically so that reuse doesn't require a flat action space.
+  **What a game whose env step is not one engine action supplies, not
+  builds**: `SingleAgentEnv` serves the case where each env step is exactly
+  one engine action (one index in, one mask out, `ActionCodec` mapping each
+  index to one action). catan spells a multi-parameter action as a short
+  sequence of atoms over consecutive env steps; those sub-steps apply nothing
+  to the engine, return reward 0 and use no step budget, which breaks the
+  one-index-one-action contract. Such a game writes its own `gym.Env` around
+  `protocols`/`driver`/`selfplay`, reusing `place_fixed_agents` and
+  `deal_until_learner` so the reset contract (seat mapping, RNG draw order,
+  the bounded re-deal loop) stays shared — the module split exists
+  specifically so that reuse doesn't require a flat action space.
   Either way, a game supplies: a thin `TurnBasedGame` adapter over its own
   engine (no engine change); its own `observation_space`/`action_space`
   objects; an encoder; a reward callable; and, for self-play, a
@@ -88,7 +94,7 @@ flowchart TB
 
     subgraph RL["rl"]
         protocols["rl.protocols<br/>TurnBasedGame · ActionCodec · RewardFn"]
-        driver["rl.driver<br/>advance_until_learner"]
+        driver["rl.driver<br/>advance_until_learner · deal_until_learner"]
         masking["rl.masking<br/>legal_action_mask · coerce_to_legal"]
         selfplay["rl.selfplay<br/>OpponentPool"]
         env["rl.env<br/>SingleAgentEnv"]

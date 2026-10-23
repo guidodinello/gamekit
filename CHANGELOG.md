@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking
+- `SingleAgentEnv`'s `step_budget` now counts engine actions (the learner's
+  and every opponent's), not learner decisions, matching catan's `CatanEnv`.
+  Anyone passing `step_budget` sees the same budget truncate about
+  `num_seats` times sooner. The budget is still checked after the opponents
+  advance, so an episode can overshoot it. truco-py never passes
+  `step_budget` and is unaffected (#55).
+
 ### Added
+- `gamekit.rl.driver.place_fixed_agents` and `deal_until_learner`: the seat
+  mapping and the bounded re-deal loop of `SingleAgentEnv.reset` as public,
+  stdlib-only helpers, so another env can share the reset contract instead of
+  copying it. `SingleAgentEnv` now calls them; the RNG draw order is unchanged
+  (#55).
+- `SingleAgentEnv(max_redeals=...)` (default `MAX_REDEALS_DEFAULT = 100`).
 - `gamekit.league.run_pairing(a, b, ...)`: the loop body of `run_league` (config
   hash check, `run_arm`, atomic write) as a public function. It writes only the
   pairing file, never `league.json`, and needs no anchor, so a consumer can play
@@ -20,7 +34,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that version's section of this file as the notes, and attaches the wheel and
   sdist built by `uv build`. See README `Releasing`.
 
+### Fixed
+- `SingleAgentEnv.reset` re-dealt in an unbounded loop; it now raises
+  `RuntimeError` after `max_redeals` deals that all end before the learner
+  acts (#55).
+- `SingleAgentEnv.step` now treats an action index outside
+  `[0, codec.n_actions)` as illegal and follows `on_illegal`. A negative
+  index used to wrap around the mask and an index past the end raised
+  `IndexError`. Under `"coerce"` such an index now consumes one RNG draw (#55).
+
 ### Changed
+- The `SingleAgentEnv` docstring and README no longer say catan "needs a
+  factored/hierarchical head" (its atom composer is one); the real reason it
+  has its own env is that an env step is not always one engine action (#55).
 - `gamekit.results.write_result` is now atomic: it writes a uniquely named temp
   file in the same directory and `os.replace`s it into place, so concurrent
   writers (e.g. parallel `run_league` calls writing `league.json`) cannot leave a

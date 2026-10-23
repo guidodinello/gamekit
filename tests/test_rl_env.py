@@ -15,7 +15,16 @@ import pytest
 pytest.importorskip("gymnasium")
 
 import numpy as np
-from _fakegame import ACK, CLAIM, PASS, FakeAgent, FakeCodec, FakeGame, always_claim
+from _fakegame import (
+    ACK,
+    CLAIM,
+    PASS,
+    FakeAgent,
+    FakeCodec,
+    FakeGame,
+    ScriptedDealGame,
+    always_claim,
+)
 from gymnasium import spaces
 
 from gamekit.rl.env import SingleAgentEnv
@@ -228,3 +237,129 @@ def test_opponent_pool_mode_builds_and_uses_one_agent_per_non_learner_seat() -> 
             break
 
     assert all(agent.choose_calls >= 1 for agent in created)
+
+
+def test_reset_draw_order_is_seat_then_one_deal_seed_per_attempt() -> None:
+    """The RNG draw order is part of the contract (gamekit#7, D2): learner
+    seat first, then one deal seed per attempt, all from one stream."""
+    game = ScriptedDealGame(num_seats=3, step_limit=100, terminal_deals=2)
+    env = SingleAgentEnv(
+        game=game,
+        codec=FakeCodec(),
+        encode=_encode,
+        reward=_ScoreReward(),
+        observation_space=_OBS_SPACE,
+        num_seats=3,
+        agents=[FakeAgent("b"), FakeAgent("c")],
+        seed=0,
+    )
+
+    env.reset(seed=123)
+
+    rng = random.Random(123)
+    expected_seat = rng.randint(0, 2)
+    expected_seeds = [rng.randint(0, 2**31 - 1) for _ in range(3)]
+    assert env._learner_seat == expected_seat
+    assert game.reset_seeds == expected_seeds
+
+
+def test_step_budget_counts_opponent_engine_actions() -> None:
+    # One learner PASS plus two opponent PASSes is 3 engine actions, so a
+    # budget of 3 truncates after a single learner step.
+    env = _make_env()
+    env._step_budget = 3
+    env.reset(seed=1)
+
+    _, _, terminated, truncated, _ = env.step(np.int64(PASS))
+
+    assert not terminated
+    assert truncated
+
+
+def test_step_budget_does_not_truncate_before_it_is_reached() -> None:
+    env = _make_env()
+    env._step_budget = 4
+    env.reset(seed=1)
+
+    _, _, _, truncated, _ = env.step(np.int64(PASS))
+
+    assert not truncated
+
+
+@pytest.mark.parametrize("index", [-2, 3, 99])
+def test_out_of_range_index_raises_value_error_when_on_illegal_is_raise(
+    index: int,
+) -> None:
+    env = _make_env(on_illegal="raise")
+    env.reset(seed=1)
+
+    with pytest.raises(ValueError, match="illegal action index"):
+        env.step(np.int64(index))
+
+
+@pytest.mark.parametrize("index", [-2, 3, 99])
+def test_out_of_range_index_is_coerced_by_default(index: int) -> None:
+    env = _make_env(on_illegal="coerce")
+    env.reset(seed=1)
+
+    _, _, terminated, _, _ = env.step(np.int64(index))
+
+    assert not terminated  # coerced to a legal MAIN action
+
+
+def _scripted_env(**kwargs: Any) -> tuple[SingleAgentEnv, ScriptedDealGame]:
+    terminal_deals = kwargs.pop("terminal_deals", 0)
+    game = ScriptedDealGame(num_seats=3, step_limit=100, terminal_deals=terminal_deals)
+    env = SingleAgentEnv(
+        game=game,
+        codec=FakeCodec(),
+        encode=_encode,
+        reward=_ScoreReward(),
+        observation_space=_OBS_SPACE,
+        num_seats=3,
+        agents=[FakeAgent("b"), FakeAgent("c")],
+        randomize_seat=False,
+        seed=0,
+        **kwargs,
+    )
+    return env, game
+
+
+def test_reset_raises_when_every_deal_ends_before_the_learner_acts() -> None:
+    env, game = _scripted_env(terminal_deals=10**6, max_redeals=3)
+
+    with pytest.raises(RuntimeError, match="3 deals"):
+        env.reset(seed=1)
+
+    assert len(game.reset_seeds) == 3
+
+
+def test_on_episode_start_fires_once_per_deal_attempt() -> None:
+    seen: list[int] = []
+
+    class _Env(SingleAgentEnv):
+        def on_episode_start(self, state: Any, seat: int) -> None:
+            seen.append(seat)
+            super().on_episode_start(state, seat)
+
+    game = ScriptedDealGame(num_seats=3, step_limit=100, terminal_deals=2)
+    env = _Env(
+        game=game,
+        codec=FakeCodec(),
+        encode=_encode,
+        reward=_ScoreReward(),
+        observation_space=_OBS_SPACE,
+        num_seats=3,
+        agents=[FakeAgent("b"), FakeAgent("c")],
+        randomize_seat=False,
+        seed=0,
+    )
+
+    env.reset(seed=1)
+
+    assert seen == [0, 0, 0]
+
+
+def test_constructor_rejects_max_redeals_below_one() -> None:
+    with pytest.raises(ValueError, match="max_redeals"):
+        _scripted_env(max_redeals=0)
