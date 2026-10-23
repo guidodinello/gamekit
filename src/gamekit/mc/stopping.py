@@ -39,8 +39,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from gamekit.mc._common import drawn
 from gamekit.mc.intervals import MCResult
-from gamekit.mc.sample import Evaluator, Sampler, WelfordAccumulator, _drawn
+from gamekit.mc.sample import Evaluator, Sampler, WelfordAccumulator
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,7 +87,7 @@ def monte_carlo_until[T](
     n = 0
     while n < max_n:
         draw = min(batch, max_n - n)
-        for x in _drawn(sampler, draw):
+        for x in drawn(sampler, draw):
             state = accumulator.update(state, evaluator(x))
         n += draw
         if n >= min_n:

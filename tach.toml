@@ -61,14 +61,45 @@ depends_on = []
 path = "gamekit.results"
 depends_on = []
 
-# mc is a leaf package: it imports only itself. Its submodules import
-# underscore-private names from each other (_NORMAL, _z_score, _drawn; #51).
-# That is intra-module here, so tach does not see it and there is nothing to
-# allow. Enforcing a public surface would mean one [[modules]] per submodule
-# plus [[interfaces]]; that follows the #51 and #53 decisions.
+# mc is a leaf package: it imports only itself. Its submodules share helpers
+# through the private `gamekit.mc._common` (#51), so there are no
+# underscore-private cross-imports left. Decision #53: gamekit is a library, so
+# the whole `mc` surface is public and documented, and the interface below
+# exposes all of it. Other gamekit modules must import these names from the
+# `gamekit.mc` package, not from a submodule. A test pins this list to
+# `gamekit.mc.__all__`.
 [[modules]]
 path = "gamekit.mc"
 depends_on = []
+
+[[interfaces]]
+from = ["gamekit.mc"]
+expose = [
+    "^Accumulator$",
+    "^AdaptiveResult$",
+    "^ConfidenceInterval$",
+    "^Evaluator$",
+    "^MCResult$",
+    "^MeanAccumulator$",
+    "^Sampler$",
+    "^TwoProportionTest$",
+    "^WelfordAccumulator$",
+    "^WelfordState$",
+    "^antithetic$",
+    "^benjamini_hochberg$",
+    "^control_beta$",
+    "^control_variate$",
+    "^monte_carlo$",
+    "^monte_carlo_reduce$",
+    "^monte_carlo_until$",
+    "^paired_mean$",
+    "^sample_size_clt$",
+    "^sample_size_hoeffding$",
+    "^scalar_sampler$",
+    "^two_proportion_sample_size$",
+    "^two_proportion_test$",
+    "^wilson_interval$",
+]
 
 # ── Evaluation (stdlib only) ────────────────────────────────────────────────
 

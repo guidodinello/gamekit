@@ -21,6 +21,8 @@ history.
   vectorized samplers with no numpy dependency), variance reduction
   (`antithetic`, `control_variate`), and adaptive stopping
   (`monte_carlo_until`, run until a target confidence-interval half-width).
+  See [Monte Carlo statistics](#monte-carlo-statistics-gamekitmc) below for what
+  each part is for.
 - `gamekit.seats` — seat-keyed RNG streams (`seat_rng`, plus the deprecated
   pre-0.2.0 `seat_rng_legacy` for replaying old results), lineup rotation,
   and seat-occupancy counting.
@@ -63,6 +65,94 @@ history.
   objects; an encoder; a reward callable; and, for self-play, a
   checkpoint-loading callable.
 
+## Monte Carlo statistics (`gamekit.mc`)
+
+Everything below is public API, importable from `gamekit.mc` and stdlib-only.
+gamekit is a library: parts are documented here by purpose, not by who calls
+them today.
+
+**Intervals and tests.** `wilson_interval(k, n)` for any proportion;
+`two_proportion_test(k1, n1, k2, n2)` for comparing two arms, with
+`benjamini_hochberg` to control the false-discovery rate across many such
+comparisons. `MCResult.confidence_interval()` gives a normal CI for a mean.
+
+**Sample size.** Plan `n` before running. `two_proportion_sample_size` is the
+per-arm `n` to detect a difference `delta` between proportions near `p`;
+`sample_size_clt` and `sample_size_hoeffding` do the same for a [0, 1]-bounded
+mean (Hoeffding is distribution-free and more conservative).
+
+```python
+from gamekit.mc import two_proportion_sample_size, sample_size_clt
+
+two_proportion_sample_size(0.207, 0.025)  # 4123 per arm, 80% power, alpha 0.05
+sample_size_clt(0.01, 0.05)  # 9604
+```
+
+**The fold: `monte_carlo`, `monte_carlo_reduce`, `Accumulator`.** One model,
+`Sampler -> Evaluator -> Accumulator`. A `Sampler` takes a count and returns
+that many values and never owns randomness, so your seed schedule (and common
+random numbers across arms) stays yours. `monte_carlo` estimates a mean;
+`monte_carlo_reduce` folds through any `Accumulator[V, S, R]`, for estimands
+that are not a mean. A numpy-returning sampler works with no numpy import here.
+
+```python
+import random
+from gamekit.mc import monte_carlo, monte_carlo_reduce, scalar_sampler
+
+rng = random.Random(0)
+sampler = scalar_sampler(rng.random)
+
+result = monte_carlo(10_000, sampler, lambda u: u * u)  # E[U^2] = 1/3
+result.mean, result.confidence_interval()
+
+
+class MinMax:  # satisfies Accumulator[float, tuple[float, float], tuple[float, float]]
+    init = (float("inf"), float("-inf"))
+
+    def update(self, state, value):
+        return (min(state[0], value), max(state[1], value))
+
+    def finalize(self, state):
+        return state
+
+
+monte_carlo_reduce(1_000, sampler, lambda u: u, MinMax())
+```
+
+`MeanAccumulator` is the hand-fed counterpart: call `update(sample)` yourself
+and read `result()`.
+
+**Adaptive stopping: `monte_carlo_until`.** Use it when the right `n` is not
+known upfront, e.g. an expensive evaluation where you want to stop as soon as
+the CI is tight enough. It draws in batches and stops at a target half-width or
+at a required `max_n`; `target_met` says which.
+
+```python
+from gamekit.mc import monte_carlo_until
+
+out = monte_carlo_until(
+    sampler, lambda u: u * u, target_half_width=0.005, max_n=100_000
+)
+out.target_met, out.result.n
+```
+
+**Variance reduction.** Both are `Sampler`/`Evaluator` wrappers that compose with
+the fold. `antithetic` + `paired_mean` pair each draw with a reflection of it
+(helps when the two evaluations are negatively correlated). `control_variate`
+subtracts a correlated quantity with a known mean, and `control_beta` estimates
+the coefficient from a separate pilot sample.
+
+```python
+from gamekit.mc import antithetic, control_beta, control_variate, paired_mean
+
+# E[U] = 0.5; U and 1 - U are perfectly negatively correlated.
+monte_carlo(5_000, antithetic(sampler, lambda u: 1.0 - u), paired_mean(lambda u: u))
+
+pilot = [(u * u, u) for u in (rng.random() for _ in range(1_000))]
+beta = control_beta(pilot)  # estimate f = u^2 against control c = u (E[c] = 0.5)
+monte_carlo(10_000, sampler, control_variate(lambda u: u * u, lambda u: u, 0.5, beta))
+```
+
 ## Architecture
 
 Solid arrows come from the `import` statements in `src/gamekit`: A → B means A
@@ -84,6 +174,7 @@ flowchart TB
         testing["mc.testing<br/>two_proportion_test · benjamini_hochberg"]
         sizes["mc.sample_size"]
         fold["mc.sample · accumulate · stopping · variance<br/>Sampler → Evaluator → Accumulator fold"]
+        common["mc._common (private)<br/>NORMAL · z_score · drawn"]
     end
 
     subgraph EVAL["evaluation (stdlib)"]
@@ -103,8 +194,10 @@ flowchart TB
     gym[("gymnasium + numpy<br/>[rl] extra")]
     game(["game repo<br/>truco-py · catan"])
 
-    testing --> intervals
-    sizes --> intervals
+    intervals --> common
+    testing --> common
+    sizes --> common
+    fold --> common
     fold --> intervals
     benchmark --> testing
     benchmark --> intervals
@@ -134,8 +227,10 @@ flowchart TB
 
 The `mc.sample · accumulate · stopping · variance` node is collapsed for
 readability. Inside it, `sample` imports `accumulate`; `stopping` and `variance`
-import `sample`; and `stopping`, `sample` and `accumulate` each import
-`mc.intervals` directly.
+import `sample`; `stopping`, `sample` and `accumulate` each import
+`mc.intervals` directly (for `MCResult`); and `sample` and `stopping` import
+`mc._common`. `mc._common` is a private leaf holding the helpers several mc
+modules share (the normal distribution, `z_score`, `drawn`); it is not exported.
 
 The package-level edges are enforced in CI by [`tach.toml`](tach.toml): an
 import that is not drawn here fails the `Module Boundaries (Python)` job.
