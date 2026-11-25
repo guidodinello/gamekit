@@ -141,7 +141,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --locked --dev --python ${{ matrix.python-version }}
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: uv sync --locked --dev --python "$PYTHON_VERSION"
 
       - name: Run tests
         run: uv run pytest
@@ -171,7 +173,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --locked --dev --python ${{ matrix.python-version }}
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: uv sync --locked --dev --python "$PYTHON_VERSION"
 
       - name: mypy
         run: uv run mypy src tests
@@ -200,7 +204,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies (with the [rl] extra)
-        run: uv sync --locked --dev --extra rl --python ${{ matrix.python-version }}
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: uv sync --locked --dev --extra rl --python "$PYTHON_VERSION"
 
       - name: Run tests
         run: uv run pytest
