@@ -93,8 +93,42 @@ jobs:
       - name: ruff lint
         run: uv run ruff check .
 
+<<<<<<< before updating
   tach-check:
     name: Module Boundaries (Python)
+=======
+      # Hook envs live in ~/.cache/pre-commit, outside setup-uv's cache. The
+      # key covers the config (hook revs, language_version); pre-commit
+      # rebuilds an env whose interpreter has since changed on its own.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        # Persistent homelab runners keep ~/.cache/pre-commit on disk; restoring or
+        # saving it through actions/cache only costs time there (same reasoning as
+        # setup-uv's enable-cache above, fitted Issue 361).
+        if: ${{ !contains(runner.name, 'homelab') }}
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      # Runs the whole .pre-commit-config.yaml, so the hygiene hooks
+      # (end-of-file-fixer, trailing-whitespace, check-yaml/toml/json, ...) gate
+      # merges too; a hookless clone, --no-verify or the web editor skips them
+      # locally. pre-commit is a dev dependency, so uv.lock pins its version.
+      - name: pre-commit hooks
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+  # Audits the workflow files with zizmor. It is in the `CI` job's needs:, so a
+  # finding blocks the merge. The version is pinned so a new upstream audit
+  # cannot turn this red between runs; Dependabot does not bump a `uvx` pin, so
+  # bump it by hand.
+  # Runs the auditor persona, a superset of the default one, so findings the default
+  # hides (undocumented permissions, missing concurrency, unnamed jobs, secrets
+  # outside an environment) fail CI too. An intentional exception is an inline
+  # `# zizmor: ignore[<rule>] <reason>` comment inside the finding's span.
+  # GH_TOKEN is the read-only workflow token; it enables the online audits that
+  # check each pinned SHA really belongs to the tagged repo.
+  audit-workflows:
+    name: Audit workflows
+>>>>>>> after updating
     runs-on: ${{ fromJSON(vars.CI_RUNNERS || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -109,6 +143,7 @@ jobs:
           enable-cache: ${{ !contains(runner.name, 'homelab') }}
           cache-dependency-glob: "uv.lock"
 
+<<<<<<< before updating
       - name: Install dependencies
         run: uv sync --locked --dev
 
@@ -116,6 +151,12 @@ jobs:
       # check is deterministic. tach.toml encodes the README's import graph.
       - name: tach check
         run: uv run tach check
+=======
+      - name: zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uvx zizmor@1.31.1 --persona auditor --format=github .github/workflows
+>>>>>>> after updating
 
   test-python:
     name: Tests (Python)
